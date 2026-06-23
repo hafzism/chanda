@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": true,
+    "target": "es2023"
+  },
+  "include": ["drizzle.config.ts", "src/**/*.ts", "test/**/*.ts"]
+}
