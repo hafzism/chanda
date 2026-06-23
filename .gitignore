@@ -1,0 +1,29 @@
+# Private Codex/project-management material
+/AGENTS.md
+/work/
+/outputs/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Dependencies and build outputs
+node_modules/
+.pnpm-store/
+.turbo/
+.next/
+dist/
+coverage/
+playwright-report/
+test-results/
+
+# Local tooling and operating-system files
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
