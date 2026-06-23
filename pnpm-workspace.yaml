@@ -1,0 +1,24 @@
+packages:
+  - apps/*
+  - packages/*
+
+allowBuilds:
+  '@firebase/util': false
+  esbuild: true
+  protobufjs: false
+  sharp: true
+
+minimumReleaseAgeExclude:
+  - tsx@4.23.1
+
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - esbuild
+  - sharp
+
+overrides:
+  '@angular-devkit/core>ajv': 8.18.0
+  '@esbuild-kit/core-utils>esbuild': 0.25.12
+  picomatch: 4.0.4
+  postcss: 8.5.10
+  uuid: 11.1.1
