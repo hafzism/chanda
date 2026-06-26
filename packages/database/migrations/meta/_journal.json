@@ -15,6 +15,34 @@
       "when": 1783953682263,
       "tag": "0001_tenant_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783957305498,
+      "tag": "0002_knowledge_foundation",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783958974849,
+      "tag": "0003_transactional_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1783960563994,
+      "tag": "0004_support_domain",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1783961769748,
+      "tag": "0005_widget_origin_policy",
+      "breakpoints": true
     }
   ]
 }
