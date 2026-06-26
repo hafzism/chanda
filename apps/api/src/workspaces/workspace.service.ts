@@ -1,7 +1,13 @@
+import { randomBytes } from 'node:crypto';
+
 import { ConflictException, Inject, Injectable } from '@nestjs/common';
 
 import type { CreateWorkspaceDto } from './dto/create-workspace.dto';
-import type { WorkspaceRepository, WorkspaceSummary } from './workspace.types';
+import type {
+  WorkspaceMembership,
+  WorkspaceRepository,
+  WorkspaceSummary,
+} from './workspace.types';
 
 export const WORKSPACE_REPOSITORY = Symbol('WORKSPACE_REPOSITORY');
 
@@ -30,6 +36,7 @@ export class WorkspaceService {
         name: input.name.trim(),
         ownerUserId,
         slug: input.slug,
+        webPublicKey: `pub_${randomBytes(18).toString('base64url')}`,
       });
     } catch (error: unknown) {
       if (isUniqueViolation(error)) {
@@ -44,5 +51,12 @@ export class WorkspaceService {
 
   listForUser(userId: string): Promise<WorkspaceSummary[]> {
     return this.repository.listForUser(userId);
+  }
+
+  findMembership(
+    userId: string,
+    workspaceId: string,
+  ): Promise<WorkspaceMembership | null> {
+    return this.repository.findMembership(userId, workspaceId);
   }
 }

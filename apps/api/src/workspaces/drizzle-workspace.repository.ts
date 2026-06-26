@@ -1,8 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { eq, workspaceMembers, workspaces } from '@suppline/database';
+import {
+  and,
+  channelConnections,
+  eq,
+  workspaceMembers,
+  workspaces,
+} from '@suppline/database';
 
 import { DatabaseService } from '../database/database.service';
-import type { WorkspaceRepository, WorkspaceSummary } from './workspace.types';
+import type {
+  WorkspaceMembership,
+  WorkspaceRepository,
+  WorkspaceSummary,
+} from './workspace.types';
 
 @Injectable()
 export class DrizzleWorkspaceRepository implements WorkspaceRepository {
@@ -12,6 +22,7 @@ export class DrizzleWorkspaceRepository implements WorkspaceRepository {
     name: string;
     ownerUserId: string;
     slug: string;
+    webPublicKey: string;
   }): Promise<WorkspaceSummary> {
     return this.database.db.transaction(async (transaction) => {
       const [workspace] = await transaction
@@ -36,6 +47,13 @@ export class DrizzleWorkspaceRepository implements WorkspaceRepository {
         userId: input.ownerUserId,
         workspaceId: workspace.id,
       });
+      await transaction.insert(channelConnections).values({
+        kind: 'web',
+        name: 'Website chat',
+        publicKey: input.webPublicKey,
+        status: 'active',
+        workspaceId: workspace.id,
+      });
 
       return { ...workspace, role: 'owner' };
     });
@@ -53,5 +71,27 @@ export class DrizzleWorkspaceRepository implements WorkspaceRepository {
       .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
       .where(eq(workspaceMembers.userId, userId))
       .orderBy(workspaces.name);
+  }
+
+  async findMembership(
+    userId: string,
+    workspaceId: string,
+  ): Promise<WorkspaceMembership | null> {
+    const [membership] = await this.database.db
+      .select({
+        role: workspaceMembers.role,
+        userId: workspaceMembers.userId,
+        workspaceId: workspaceMembers.workspaceId,
+      })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.userId, userId),
+          eq(workspaceMembers.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    return membership ?? null;
   }
 }

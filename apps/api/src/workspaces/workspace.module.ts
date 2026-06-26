@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { DrizzleWorkspaceRepository } from './drizzle-workspace.repository';
 import { WorkspaceController } from './workspace.controller';
+import { WorkspaceRoleGuard } from './workspace-role.guard';
 import { WORKSPACE_REPOSITORY, WorkspaceService } from './workspace.service';
 
 @Module({
@@ -10,7 +11,9 @@ import { WORKSPACE_REPOSITORY, WorkspaceService } from './workspace.service';
   imports: [AuthModule],
   providers: [
     WorkspaceService,
+    WorkspaceRoleGuard,
     { provide: WORKSPACE_REPOSITORY, useClass: DrizzleWorkspaceRepository },
   ],
+  exports: [WorkspaceRoleGuard, WorkspaceService],
 })
 export class WorkspaceModule {}

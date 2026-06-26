@@ -8,13 +8,16 @@ import type { WorkspaceRepository } from '../src/workspaces/workspace.types';
 describe('WorkspaceService', () => {
   let createMock: MockedFunction<WorkspaceRepository['create']>;
   let listMock: MockedFunction<WorkspaceRepository['listForUser']>;
+  let membershipMock: MockedFunction<WorkspaceRepository['findMembership']>;
   let service: WorkspaceService;
 
   beforeEach(() => {
     createMock = vi.fn<WorkspaceRepository['create']>();
     listMock = vi.fn<WorkspaceRepository['listForUser']>();
+    membershipMock = vi.fn<WorkspaceRepository['findMembership']>();
     service = new WorkspaceService({
       create: createMock,
+      findMembership: membershipMock,
       listForUser: listMock,
     });
   });
@@ -33,11 +36,13 @@ describe('WorkspaceService', () => {
         slug: 'acme-support',
       }),
     ).resolves.toMatchObject({ role: 'owner' });
-    expect(createMock).toHaveBeenCalledWith({
+    const input = createMock.mock.calls[0]?.[0];
+    expect(input).toMatchObject({
       name: 'Acme Support',
       ownerUserId: 'user-1',
       slug: 'acme-support',
     });
+    expect(input?.webPublicKey).toMatch(/^pub_[A-Za-z0-9_-]{24}$/);
   });
 
   it('turns a unique slug violation into a useful conflict response', async () => {

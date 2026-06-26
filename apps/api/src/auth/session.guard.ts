@@ -18,6 +18,16 @@ type AuthenticatedRequest = Request & {
   [AUTH_SESSION]?: SessionRecord;
 };
 
+export function readAuthenticatedSession(request: Request): SessionRecord {
+  const session = (request as AuthenticatedRequest)[AUTH_SESSION];
+
+  if (!session) {
+    throw new UnauthorizedException('A Suppline session is required.');
+  }
+
+  return session;
+}
+
 @Injectable()
 export class SessionGuard implements CanActivate {
   constructor(private readonly authService: AuthService) {}
@@ -37,13 +47,8 @@ export class SessionGuard implements CanActivate {
 
 export const CurrentSession = createParamDecorator(
   (_data: unknown, context: ExecutionContext): SessionRecord => {
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const session = request[AUTH_SESSION];
-
-    if (!session) {
-      throw new UnauthorizedException('A Suppline session is required.');
-    }
-
-    return session;
+    return readAuthenticatedSession(
+      context.switchToHttp().getRequest<Request>(),
+    );
   },
 );
