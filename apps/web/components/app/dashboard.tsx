@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Brand } from '../brand';
+import { KnowledgeLibrary } from './knowledge-library';
 import { firebaseAuth } from '../../lib/firebase';
 import {
   listWorkspaces,
@@ -288,6 +289,13 @@ export function Dashboard() {
                 </div>
               </section>
             </>
+          ) : activeSection === 'Knowledge' ? (
+            <KnowledgeLibrary
+              canManage={
+                workspace.role === 'owner' || workspace.role === 'admin'
+              }
+              workspaceId={workspace.id}
+            />
           ) : (
             <SectionEmptyState
               section={activeSection}
