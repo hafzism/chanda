@@ -4,10 +4,14 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  Matches,
   MinLength,
 } from 'class-validator';
 
 export class IngestWidgetMessageDto {
+  @Matches(/^[A-Za-z0-9_-]{43}$/)
+  conversationToken!: string;
+
   @IsUUID()
   visitorId!: string;
 

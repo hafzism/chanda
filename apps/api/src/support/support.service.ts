@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import {
   BadRequestException,
   ForbiddenException,
@@ -9,8 +11,14 @@ import {
 import type { IngestWidgetMessageDto } from './dto/ingest-widget-message.dto';
 import { RateLimitService } from './rate-limit.service';
 import type {
+  InboxConversationDetail,
+  InboxConversationSummary,
+  InboxMessage,
+  InboxNote,
   SupportRepository,
+  TicketUpdate,
   WebChannelSummary,
+  WidgetConversationRead,
   WidgetMessageResult,
 } from './support.types';
 
@@ -32,6 +40,73 @@ export class SupportService {
     private readonly repository: SupportRepository,
     private readonly rateLimit: RateLimitService,
   ) {}
+
+  listInbox(workspaceId: string): Promise<InboxConversationSummary[]> {
+    return this.repository.listInbox(workspaceId);
+  }
+
+  async getInboxConversation(
+    workspaceId: string,
+    conversationId: string,
+  ): Promise<InboxConversationDetail> {
+    const conversation = await this.repository.getInboxConversation(
+      workspaceId,
+      conversationId,
+    );
+    if (!conversation) throw new NotFoundException('Conversation not found.');
+    return conversation;
+  }
+
+  async addInboxNote(
+    workspaceId: string,
+    conversationId: string,
+    userId: string,
+    body: string,
+  ): Promise<InboxNote> {
+    const note = await this.repository.addInboxNote(
+      workspaceId,
+      conversationId,
+      userId,
+      requireMeaningfulBody(body),
+    );
+    if (!note) throw new NotFoundException('Conversation not found.');
+    return note;
+  }
+
+  async sendInboxReply(
+    workspaceId: string,
+    conversationId: string,
+    userId: string,
+    body: string,
+    draftId?: string,
+  ): Promise<InboxMessage> {
+    const message = await this.repository.sendInboxReply(
+      workspaceId,
+      conversationId,
+      userId,
+      requireMeaningfulBody(body),
+      draftId,
+    );
+    if (!message) throw new NotFoundException('Conversation not found.');
+    return message;
+  }
+
+  async updateTicket(
+    workspaceId: string,
+    conversationId: string,
+    input: TicketUpdate,
+  ): Promise<InboxConversationSummary> {
+    if (!input.status && !input.priority) {
+      throw new BadRequestException('A status or priority is required.');
+    }
+    const ticket = await this.repository.updateTicket(
+      workspaceId,
+      conversationId,
+      input,
+    );
+    if (!ticket) throw new NotFoundException('Conversation not found.');
+    return ticket;
+  }
 
   async getWebChannel(workspaceId: string): Promise<WebChannelSummary> {
     const channel = await this.repository.getWebChannel(workspaceId);
@@ -62,6 +137,30 @@ export class SupportService {
     }
   }
 
+  async readWidgetConversation(
+    publicKey: string,
+    threadId: string,
+    token: string,
+    ipAddress: string,
+    origin?: string,
+  ): Promise<WidgetConversationRead> {
+    if (!/^pub_[A-Za-z0-9_-]{24,64}$/.test(publicKey)) {
+      throw new NotFoundException('Web chat connection not found.');
+    }
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      throw new NotFoundException('Conversation not found.');
+    }
+    if (origin) await this.assertWidgetOrigin(publicKey, origin);
+    await this.rateLimit.consumeWidgetRead(publicKey, ipAddress);
+    const conversation = await this.repository.readWidgetConversation(
+      publicKey,
+      threadId,
+      hashCapability(token),
+    );
+    if (!conversation) throw new NotFoundException('Conversation not found.');
+    return conversation;
+  }
+
   async ingestWidgetMessage(
     publicKey: string,
     ipAddress: string,
@@ -81,6 +180,7 @@ export class SupportService {
       externalMessageId: input.messageId,
       externalThreadId: input.threadId,
       externalVisitorId: input.visitorId,
+      publicAccessTokenHash: hashCapability(input.conversationToken),
       publicKey,
     };
     let result: WidgetMessageResult | null;
@@ -93,6 +193,16 @@ export class SupportService {
     if (!result) throw new NotFoundException('Web chat connection not found.');
     return result;
   }
+}
+
+function hashCapability(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function requireMeaningfulBody(value: string): string {
+  const body = value.trim();
+  if (!body) throw new BadRequestException('Message body cannot be empty.');
+  return body;
 }
 
 function normalizeOrigin(value: string): string {
