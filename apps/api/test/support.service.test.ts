@@ -11,16 +11,28 @@ import type { SupportRepository } from '../src/support/support.types';
 
 describe('SupportService', () => {
   const ingestMock = vi.fn<SupportRepository['ingestWidgetMessage']>();
+  const addInboxNoteMock = vi.fn<SupportRepository['addInboxNote']>();
   const findPolicyMock =
     vi.fn<SupportRepository['findWidgetConnectionPolicy']>();
+  const getInboxConversationMock =
+    vi.fn<SupportRepository['getInboxConversation']>();
+  const getAiDraftContextMock = vi.fn<SupportRepository['getAiDraftContext']>();
   const getWebChannelMock = vi.fn<SupportRepository['getWebChannel']>();
+  const listInboxMock = vi.fn<SupportRepository['listInbox']>();
+  const readWidgetConversationMock =
+    vi.fn<SupportRepository['readWidgetConversation']>();
+  const sendInboxReplyMock = vi.fn<SupportRepository['sendInboxReply']>();
+  const saveAiDraftMock = vi.fn<SupportRepository['saveAiDraft']>();
+  const updateTicketMock = vi.fn<SupportRepository['updateTicket']>();
   const updateOriginsMock = vi.fn<SupportRepository['updateWidgetOrigins']>();
   const consumeMock = vi.fn<RateLimitService['consumeWidgetMessage']>();
+  const consumeReadMock = vi.fn<RateLimitService['consumeWidgetRead']>();
   let service: SupportService;
 
   beforeEach(() => {
     vi.clearAllMocks();
     consumeMock.mockResolvedValue(undefined);
+    consumeReadMock.mockResolvedValue(undefined);
     ingestMock.mockResolvedValue({
       conversationId: 'conversation-1',
       messageId: 'message-1',
@@ -28,12 +40,23 @@ describe('SupportService', () => {
     });
     service = new SupportService(
       {
+        addInboxNote: addInboxNoteMock,
         findWidgetConnectionPolicy: findPolicyMock,
+        getInboxConversation: getInboxConversationMock,
+        getAiDraftContext: getAiDraftContextMock,
         getWebChannel: getWebChannelMock,
         ingestWidgetMessage: ingestMock,
+        listInbox: listInboxMock,
+        readWidgetConversation: readWidgetConversationMock,
+        saveAiDraft: saveAiDraftMock,
+        sendInboxReply: sendInboxReplyMock,
+        updateTicket: updateTicketMock,
         updateWidgetOrigins: updateOriginsMock,
       },
-      { consumeWidgetMessage: consumeMock } as unknown as RateLimitService,
+      {
+        consumeWidgetMessage: consumeMock,
+        consumeWidgetRead: consumeReadMock,
+      } as unknown as RateLimitService,
     );
   });
 
@@ -41,6 +64,7 @@ describe('SupportService', () => {
     await expect(
       service.ingestWidgetMessage('pub_123456789012345678901234', '127.0.0.1', {
         body: '  Where is my order?  ',
+        conversationToken: 'a'.repeat(43),
         displayName: '  Riyas  ',
         email: 'RIYAS@example.com',
         messageId: 'af36c7f9-327b-49c3-a796-e14707a1b62f',
@@ -49,17 +73,20 @@ describe('SupportService', () => {
       }),
     ).resolves.toMatchObject({ ticketNumber: 1 });
     expect(consumeMock).toHaveBeenCalledOnce();
-    expect(ingestMock.mock.calls[0]?.[0]).toMatchObject({
+    const storedInput = ingestMock.mock.calls[0]?.[0];
+    expect(storedInput).toMatchObject({
       body: 'Where is my order?',
       displayName: 'Riyas',
       email: 'riyas@example.com',
     });
+    expect(storedInput?.publicAccessTokenHash).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('does not query storage for malformed public keys', async () => {
     await expect(
       service.ingestWidgetMessage('invalid', '127.0.0.1', {
         body: 'Hello',
+        conversationToken: 'a'.repeat(43),
         messageId: 'af36c7f9-327b-49c3-a796-e14707a1b62f',
         threadId: '6d490022-6c36-4d7a-aa2d-cf99f4927e03',
         visitorId: '0cb70bc7-eb27-437f-9587-06a3e4f801a8',
@@ -84,6 +111,7 @@ describe('SupportService', () => {
       '127.0.0.1',
       {
         body: 'Hello',
+        conversationToken: 'a'.repeat(43),
         messageId: 'af36c7f9-327b-49c3-a796-e14707a1b62f',
         threadId: '6d490022-6c36-4d7a-aa2d-cf99f4927e03',
         visitorId: '0cb70bc7-eb27-437f-9587-06a3e4f801a8',
@@ -142,5 +170,54 @@ describe('SupportService', () => {
         'https://attacker.example.com',
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('does not reveal missing or cross-workspace conversations', async () => {
+    getInboxConversationMock.mockResolvedValue(null);
+
+    await expect(
+      service.getInboxConversation('workspace-1', 'conversation-1'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('requires a valid capability before reading a widget conversation', async () => {
+    await expect(
+      service.readWidgetConversation(
+        'pub_123456789012345678901234',
+        'thread-1',
+        'invalid',
+        '127.0.0.1',
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(consumeReadMock).not.toHaveBeenCalled();
+    expect(readWidgetConversationMock).not.toHaveBeenCalled();
+  });
+
+  it('normalizes replies and rejects empty ticket updates', async () => {
+    sendInboxReplyMock.mockResolvedValue({
+      authorKind: 'agent',
+      body: 'Thanks for contacting us.',
+      direction: 'outbound',
+      id: 'message-1',
+      occurredAt: new Date(),
+    });
+
+    await service.sendInboxReply(
+      'workspace-1',
+      'conversation-1',
+      'user-1',
+      '  Thanks for contacting us.  ',
+    );
+    expect(sendInboxReplyMock).toHaveBeenCalledWith(
+      'workspace-1',
+      'conversation-1',
+      'user-1',
+      'Thanks for contacting us.',
+      undefined,
+    );
+    await expect(
+      service.updateTicket('workspace-1', 'conversation-1', {}),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(updateTicketMock).not.toHaveBeenCalled();
   });
 });
