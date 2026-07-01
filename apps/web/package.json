@@ -3,14 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev --port ${WEB_PORT:-3000}",
+    "build": "pnpm build:widget && next build",
+    "build:widget": "esbuild ../widget/src/index.ts --bundle --format=iife --global-name=SupplineWidget --minify --outfile=public/widget.js",
+    "dev": "pnpm build:widget && next dev --port ${WEB_PORT:-3000}",
     "lint": "eslint .",
     "start": "next start --port ${WEB_PORT:-3000}",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@suppline/widget": "workspace:*",
     "firebase": "12.16.0",
     "lucide-react": "1.24.0",
     "next": "16.2.10",
@@ -22,6 +24,7 @@
     "@types/node": "24.10.12",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
+    "esbuild": "0.28.1",
     "tailwindcss": "4.3.2",
     "typescript": "5.9.3",
     "vitest": "4.1.1"

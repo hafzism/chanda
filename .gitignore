@@ -21,6 +21,7 @@ coverage/
 *.tsbuildinfo
 playwright-report/
 test-results/
+/apps/web/public/widget.js
 
 # Local tooling and operating-system files
 .DS_Store

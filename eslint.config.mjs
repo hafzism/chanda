@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/dist/**',
       '**/node_modules/**',
+      'apps/web/public/widget.js',
       'outputs/**',
       'work/**',
     ],
