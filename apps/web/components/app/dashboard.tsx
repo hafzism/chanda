@@ -1,16 +1,12 @@
 'use client';
 
 import {
-  BarChart3,
   BookOpen,
+  Globe2,
   Inbox,
-  LayoutDashboard,
   LogOut,
   Menu,
-  MessageSquareText,
-  Settings,
-  Sparkles,
-  Users,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { signOut } from 'firebase/auth';
@@ -18,7 +14,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Brand } from '../brand';
+import { ChannelsPanel } from './channels-panel';
+import { InboxPanel } from './inbox-panel';
 import { KnowledgeLibrary } from './knowledge-library';
+import { TeamPanel } from './team-panel';
 import { firebaseAuth } from '../../lib/firebase';
 import {
   listWorkspaces,
@@ -29,19 +28,19 @@ import {
 } from '../../lib/session';
 
 const navItems = [
-  { icon: LayoutDashboard, label: 'Overview' },
-  { icon: Inbox, label: 'Inbox', badge: '0' },
+  { icon: Inbox, label: 'Inbox' },
   { icon: BookOpen, label: 'Knowledge' },
-  { icon: Users, label: 'Team' },
-  { icon: BarChart3, label: 'Analytics' },
+  { icon: Globe2, label: 'Channels' },
+  { icon: UsersRound, label: 'Team' },
 ];
 
 export function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<SessionUser>();
   const [workspace, setWorkspace] = useState<WorkspaceSummary>();
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('Overview');
+  const [activeSection, setActiveSection] = useState('Inbox');
   const [error, setError] = useState<string>();
 
   useEffect(() => {
@@ -52,13 +51,21 @@ export function Dashboard() {
           router.replace('/sign-in');
           return;
         }
-        const workspaces = await listWorkspaces();
-        if (!workspaces[0]) {
+        const availableWorkspaces = await listWorkspaces();
+        if (!availableWorkspaces[0]) {
           router.replace('/onboarding');
           return;
         }
+        const preferredWorkspaceId = window.localStorage.getItem(
+          'suppline:last-workspace-id',
+        );
+        const selectedWorkspace =
+          availableWorkspaces.find(
+            (item) => item.id === preferredWorkspaceId,
+          ) ?? availableWorkspaces[0];
         setUser(session.user);
-        setWorkspace(workspaces[0]);
+        setWorkspaces(availableWorkspaces);
+        setWorkspace(selectedWorkspace);
       } catch (caught: unknown) {
         setError(
           caught instanceof Error
@@ -114,15 +121,35 @@ export function Dashboard() {
             <X size={20} />
           </button>
         </div>
-        <div className="workspace-switcher">
+        <label className="workspace-switcher">
           <span>{workspace.name.slice(0, 1).toUpperCase()}</span>
           <div>
-            <strong>{workspace.name}</strong>
+            <select
+              aria-label="Current workspace"
+              onChange={(event) => {
+                const selected = workspaces.find(
+                  (item) => item.id === event.target.value,
+                );
+                if (!selected) return;
+                window.localStorage.setItem(
+                  'suppline:last-workspace-id',
+                  selected.id,
+                );
+                setWorkspace(selected);
+              }}
+              value={workspace.id}
+            >
+              {workspaces.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
             <small>{workspace.role}</small>
           </div>
-        </div>
+        </label>
         <nav aria-label="Workspace navigation">
-          {navItems.map(({ badge, icon: Icon, label }) => (
+          {navItems.map(({ icon: Icon, label }) => (
             <button
               className={activeSection === label ? 'active' : ''}
               key={label}
@@ -134,22 +161,10 @@ export function Dashboard() {
             >
               <Icon size={18} />
               <span>{label}</span>
-              {badge && <b>{badge}</b>}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <button
-            className={activeSection === 'Settings' ? 'active' : ''}
-            onClick={() => {
-              setActiveSection('Settings');
-              setMenuOpen(false);
-            }}
-            type="button"
-          >
-            <Settings size={18} />
-            <span>Settings</span>
-          </button>
           <button onClick={() => void logout()} type="button">
             <LogOut size={18} />
             <span>Sign out</span>
@@ -193,102 +208,23 @@ export function Dashboard() {
           <div className="dashboard-heading">
             <div>
               <p className="eyebrow">{activeSection}</p>
-              <h1>
-                {activeSection === 'Overview'
-                  ? `Good evening, ${user.displayName?.split(' ')[0] ?? 'there'}.`
-                  : activeSection}
-              </h1>
+              <h1>{activeSection}</h1>
               <p>
-                {activeSection === 'Overview'
-                  ? 'Here’s the shape of your support operation today.'
-                  : `Everything related to ${activeSection.toLowerCase()} in ${workspace.name}.`}
+                {activeSection === 'Inbox'
+                  ? `Review customer conversations and ticket history for ${workspace.name}.`
+                  : activeSection === 'Knowledge'
+                    ? `Manage the approved evidence Suppline can use for ${workspace.name}.`
+                    : activeSection === 'Channels'
+                      ? `Control which websites can send support messages to ${workspace.name}.`
+                      : `Manage who can access ${workspace.name} and what each role can do.`}
               </p>
             </div>
-            {activeSection === 'Overview' && (
-              <span className="date-chip">Today</span>
-            )}
           </div>
-          {activeSection === 'Overview' ? (
-            <>
-              <div className="metric-grid">
-                <article>
-                  <div>
-                    <span>Open conversations</span>
-                    <Inbox size={18} />
-                  </div>
-                  <strong>0</strong>
-                  <p>Your queue is clear</p>
-                </article>
-                <article>
-                  <div>
-                    <span>AI-assisted replies</span>
-                    <Sparkles size={18} />
-                  </div>
-                  <strong>0</strong>
-                  <p>Starts after knowledge is added</p>
-                </article>
-                <article>
-                  <div>
-                    <span>Median response</span>
-                    <MessageSquareText size={18} />
-                  </div>
-                  <strong>—</strong>
-                  <p>No resolved conversations yet</p>
-                </article>
-              </div>
-              <section className="setup-panel">
-                <div className="setup-copy">
-                  <span className="setup-kicker">Workspace setup</span>
-                  <h2>Build the foundation for grounded support.</h2>
-                  <p>
-                    Suppline needs approved company knowledge before it can
-                    prepare reliable answers.
-                  </p>
-                  <div className="setup-progress">
-                    <span>
-                      <b style={{ width: '33%' }} />
-                    </span>
-                    <small>1 of 3 complete</small>
-                  </div>
-                </div>
-                <ol>
-                  <li className="complete">
-                    <span>1</span>
-                    <div>
-                      <strong>Create your workspace</strong>
-                      <p>{workspace.name} is ready.</p>
-                    </div>
-                    <b>Done</b>
-                  </li>
-                  <li>
-                    <span>2</span>
-                    <div>
-                      <strong>Add company knowledge</strong>
-                      <p>Upload policies, help articles, or product notes.</p>
-                    </div>
-                  </li>
-                  <li>
-                    <span>3</span>
-                    <div>
-                      <strong>Connect your first channel</strong>
-                      <p>Start with the web support widget.</p>
-                    </div>
-                  </li>
-                </ol>
-              </section>
-              <section className="empty-activity">
-                <span>
-                  <BarChart3 size={22} />
-                </span>
-                <div>
-                  <h2>Activity will appear here</h2>
-                  <p>
-                    Conversation volume, response time, and automation outcomes
-                    begin tracking when your first channel is connected.
-                  </p>
-                </div>
-              </section>
-            </>
+          {activeSection === 'Inbox' ? (
+            <InboxPanel
+              canManage={workspace.role !== 'viewer'}
+              workspaceId={workspace.id}
+            />
           ) : activeSection === 'Knowledge' ? (
             <KnowledgeLibrary
               canManage={
@@ -296,68 +232,22 @@ export function Dashboard() {
               }
               workspaceId={workspace.id}
             />
-          ) : (
-            <SectionEmptyState
-              section={activeSection}
-              workspaceName={workspace.name}
+          ) : activeSection === 'Channels' ? (
+            <ChannelsPanel
+              canManage={
+                workspace.role === 'owner' || workspace.role === 'admin'
+              }
+              workspaceId={workspace.id}
             />
-          )}
+          ) : activeSection === 'Team' ? (
+            <TeamPanel
+              currentUserId={user.id}
+              role={workspace.role}
+              workspaceId={workspace.id}
+            />
+          ) : null}
         </div>
       </section>
     </main>
-  );
-}
-
-function SectionEmptyState({
-  section,
-  workspaceName,
-}: {
-  section: string;
-  workspaceName: string;
-}) {
-  const content: Record<
-    string,
-    { body: string; icon: typeof Inbox; title: string }
-  > = {
-    Analytics: {
-      body: 'Conversation volume, response times, and automation outcomes will appear after your team begins supporting customers.',
-      icon: BarChart3,
-      title: 'Not enough activity yet',
-    },
-    Inbox: {
-      body: 'New customer conversations will arrive here once a support channel is connected.',
-      icon: Inbox,
-      title: 'Your inbox is clear',
-    },
-    Knowledge: {
-      body: 'Approved policies, help articles, and product notes will become the evidence behind every grounded draft.',
-      icon: BookOpen,
-      title: 'Your knowledge library is empty',
-    },
-    Settings: {
-      body: `${workspaceName} is active. Workspace identity, security, and channel preferences are managed here.`,
-      icon: Settings,
-      title: 'Workspace settings',
-    },
-    Team: {
-      body: 'Invite and role management will appear here as your support team grows.',
-      icon: Users,
-      title: 'You are the first teammate',
-    },
-  };
-  const selected = content[section] ?? {
-    body: 'New customer conversations will arrive here once a support channel is connected.',
-    icon: Inbox,
-    title: 'Your inbox is clear',
-  };
-  const Icon = selected.icon;
-  return (
-    <section className="section-empty">
-      <span>
-        <Icon size={26} />
-      </span>
-      <h2>{selected.title}</h2>
-      <p>{selected.body}</p>
-    </section>
   );
 }
