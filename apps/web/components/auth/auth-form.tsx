@@ -11,7 +11,7 @@ import {
 import { ArrowRight, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 import { firebaseAuth } from '../../lib/firebase';
 import { createSupplineSession } from '../../lib/session';
@@ -56,13 +56,21 @@ export function AuthForm({ mode }: AuthFormProps) {
     { kind: 'error' | 'success'; message: string } | undefined
   >();
   const [busy, setBusy] = useState(false);
+  const [nextPath, setNextPath] = useState('/app');
   const isSignUp = mode === 'sign-up';
+
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('next');
+    if (requested?.startsWith('/') && !requested.startsWith('//')) {
+      setNextPath(requested);
+    }
+  }, []);
 
   async function completeSignIn(
     user: Parameters<typeof createSupplineSession>[0],
   ) {
     await createSupplineSession(user);
-    router.replace('/app');
+    router.replace(nextPath);
     router.refresh();
   }
 
@@ -204,7 +212,9 @@ export function AuthForm({ mode }: AuthFormProps) {
 
       <p className="auth-switch">
         {isSignUp ? 'Already have an account?' : 'New to Suppline AI?'}{' '}
-        <Link href={isSignUp ? '/sign-in' : '/sign-up'}>
+        <Link
+          href={`${isSignUp ? '/sign-in' : '/sign-up'}${nextPath === '/app' ? '' : `?next=${encodeURIComponent(nextPath)}`}`}
+        >
           {isSignUp ? 'Sign in' : 'Create an account'}
         </Link>
       </p>
