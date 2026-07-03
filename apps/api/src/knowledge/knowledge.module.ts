@@ -13,6 +13,7 @@ import { GeminiQueryEmbeddingService } from './query-embedding.service';
 
 @Module({
   controllers: [KnowledgeController],
+  exports: [KnowledgeService],
   imports: [AuthModule, WorkspaceModule],
   providers: [
     KnowledgeService,
