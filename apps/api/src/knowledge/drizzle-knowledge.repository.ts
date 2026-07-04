@@ -3,6 +3,7 @@ import {
   and,
   eq,
   knowledgeDocuments,
+  knowledgeChunks,
   knowledgeDocumentVersions,
   outboxEvents,
   sql,
@@ -17,6 +18,8 @@ import {
 import { DatabaseService } from '../database/database.service';
 import type {
   CreateArticleRecord,
+  CreateFileRecord,
+  KnowledgeChunkInspection,
   KnowledgeDocumentSummary,
   KnowledgeRetrievalHit,
   KnowledgeRepository,
@@ -24,6 +27,12 @@ import type {
 
 type KnowledgeDocumentRow = KnowledgeDocumentSummary & Record<string, unknown>;
 type RetrievalRow = KnowledgeRetrievalHit & Record<string, unknown>;
+interface ReindexRow extends Record<string, unknown> {
+  documentId: string;
+  objectKey: string;
+  status: 'queued' | 'processing' | 'ready' | 'failed';
+  versionId: string;
+}
 
 @Injectable()
 export class DrizzleKnowledgeRepository implements KnowledgeRepository {
@@ -32,13 +41,39 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
   async createQueuedArticle(
     input: CreateArticleRecord,
   ): Promise<KnowledgeDocumentSummary> {
+    return this.createQueuedSource(input, {
+      mimeType: 'text/markdown',
+      sourceKind: 'article',
+    });
+  }
+
+  async createQueuedFile(
+    input: CreateFileRecord,
+  ): Promise<KnowledgeDocumentSummary> {
+    return this.createQueuedSource(input, {
+      extractedObjectKey: input.extractedObjectKey,
+      mimeType: input.mimeType,
+      originalFileName: input.originalFileName,
+      sourceKind: 'file',
+    });
+  }
+
+  private createQueuedSource(
+    input: CreateArticleRecord,
+    source: {
+      extractedObjectKey?: string;
+      mimeType: string;
+      originalFileName?: string;
+      sourceKind: 'article' | 'file';
+    },
+  ): Promise<KnowledgeDocumentSummary> {
     return this.database.db.transaction(async (transaction) => {
       const [document] = await transaction
         .insert(knowledgeDocuments)
         .values({
           createdByUserId: input.userId,
           id: input.documentId,
-          sourceKind: 'article',
+          sourceKind: source.sourceKind,
           title: input.title,
           workspaceId: input.workspaceId,
         })
@@ -53,9 +88,11 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
           contentHash: input.contentHash,
           createdByUserId: input.userId,
           documentId: input.documentId,
+          extractedObjectKey: source.extractedObjectKey,
           id: input.versionId,
-          mimeType: 'text/markdown',
+          mimeType: source.mimeType,
           objectKey: input.objectKey,
+          originalFilename: source.originalFileName,
           status: 'queued',
           version: 1,
           workspaceId: input.workspaceId,
@@ -109,13 +146,61 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
     return result.rows;
   }
 
+  async listChunks(
+    workspaceId: string,
+    documentId: string,
+  ): Promise<KnowledgeChunkInspection | null> {
+    return this.database.db.transaction(async (transaction) => {
+      const versions = await transaction.execute<{
+        status: KnowledgeChunkInspection['status'];
+        versionId: string;
+      }>(sql`
+        select version.id as "versionId", version.status
+        from knowledge_documents document
+        join knowledge_document_versions version
+          on version.document_id = document.id
+          and version.workspace_id = ${workspaceId}
+        where document.id = ${documentId}
+          and document.workspace_id = ${workspaceId}
+        order by version.version desc
+        limit 1
+      `);
+      const version = versions.rows[0];
+      if (!version) return null;
+
+      const chunks = await transaction
+        .select({
+          characterEnd: knowledgeChunks.characterEnd,
+          characterStart: knowledgeChunks.characterStart,
+          content: knowledgeChunks.content,
+          heading: knowledgeChunks.heading,
+          id: knowledgeChunks.id,
+          ordinal: knowledgeChunks.ordinal,
+        })
+        .from(knowledgeChunks)
+        .where(
+          and(
+            eq(knowledgeChunks.workspaceId, workspaceId),
+            eq(knowledgeChunks.documentId, documentId),
+            eq(knowledgeChunks.documentVersionId, version.versionId),
+          ),
+        )
+        .orderBy(knowledgeChunks.ordinal);
+
+      return { chunks, status: version.status };
+    });
+  }
+
   async deleteDocument(
     workspaceId: string,
     documentId: string,
   ): Promise<string[] | null> {
     return this.database.db.transaction(async (transaction) => {
       const versions = await transaction
-        .select({ objectKey: knowledgeDocumentVersions.objectKey })
+        .select({
+          extractedObjectKey: knowledgeDocumentVersions.extractedObjectKey,
+          objectKey: knowledgeDocumentVersions.objectKey,
+        })
         .from(knowledgeDocumentVersions)
         .where(
           and(
@@ -135,7 +220,11 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
         )
         .returning({ id: knowledgeDocuments.id });
       if (deleted.length !== 1) return null;
-      return versions.map((version) => version.objectKey);
+      return versions.flatMap((version) =>
+        version.extractedObjectKey
+          ? [version.objectKey, version.extractedObjectKey]
+          : [version.objectKey],
+      );
     });
   }
 
@@ -236,6 +325,61 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
       payload: input,
       topic: KNOWLEDGE_VERSION_INDEX_REQUESTED,
       workspaceId: input.workspaceId,
+    });
+  }
+
+  async reindexDocument(
+    workspaceId: string,
+    documentId: string,
+  ): Promise<'queued' | 'busy' | null> {
+    return this.database.db.transaction(async (transaction) => {
+      const versions = await transaction.execute<ReindexRow>(sql`
+        select
+          document.id as "documentId",
+          coalesce(version.extracted_object_key, version.object_key) as "objectKey",
+          version.status,
+          version.id as "versionId"
+        from knowledge_documents document
+        join knowledge_document_versions version
+          on version.document_id = document.id
+          and version.workspace_id = ${workspaceId}
+        where document.id = ${documentId}
+          and document.workspace_id = ${workspaceId}
+        order by version.version desc
+        limit 1
+        for update of version
+      `);
+      const version = versions.rows[0];
+      if (!version) return null;
+      if (version.status === 'queued' || version.status === 'processing')
+        return 'busy';
+
+      await transaction
+        .update(knowledgeDocumentVersions)
+        .set({
+          errorCode: null,
+          errorMessage: null,
+          indexedAt: null,
+          status: 'queued',
+        })
+        .where(
+          and(
+            eq(knowledgeDocumentVersions.id, version.versionId),
+            eq(knowledgeDocumentVersions.workspaceId, workspaceId),
+          ),
+        );
+      await transaction.insert(outboxEvents).values({
+        aggregateId: version.versionId,
+        payload: {
+          documentId: version.documentId,
+          objectKey: version.objectKey,
+          versionId: version.versionId,
+          workspaceId,
+        },
+        topic: KNOWLEDGE_VERSION_INDEX_REQUESTED,
+        workspaceId,
+      });
+      return 'queued';
     });
   }
 

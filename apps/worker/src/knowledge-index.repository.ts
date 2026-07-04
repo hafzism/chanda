@@ -30,7 +30,7 @@ export class KnowledgeIndexRepository {
       where id = ${job.versionId}
         and workspace_id = ${job.workspaceId}
         and document_id = ${job.documentId}
-        and object_key = ${job.objectKey}
+        and coalesce(extracted_object_key, object_key) = ${job.objectKey}
         and status <> 'ready'
       returning id
     `);

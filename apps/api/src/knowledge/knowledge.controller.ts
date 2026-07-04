@@ -9,8 +9,11 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { CurrentSession, SessionGuard } from '../auth/session.guard';
 import type { SessionRecord } from '../auth/auth.types';
@@ -19,6 +22,10 @@ import {
   WorkspaceRoles,
 } from '../workspaces/workspace-role.guard';
 import { CreateArticleDto } from './dto/create-article.dto';
+import {
+  MAX_KNOWLEDGE_FILE_BYTES,
+  type UploadedKnowledgeFile,
+} from './knowledge-file-extractor';
 import { SearchKnowledgeDto } from './dto/search-knowledge.dto';
 import { SetDocumentEnabledDto } from './dto/set-document-enabled.dto';
 import { KnowledgeService } from './knowledge.service';
@@ -48,6 +55,21 @@ export class KnowledgeController {
     );
   }
 
+  @Post('files')
+  @WorkspaceRoles('owner', 'admin')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_KNOWLEDGE_FILE_BYTES, files: 1 },
+    }),
+  )
+  createFile(
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @CurrentSession() session: SessionRecord,
+    @UploadedFile() file?: UploadedKnowledgeFile,
+  ) {
+    return this.knowledgeService.createFile(workspaceId, session.user.id, file);
+  }
+
   @Post('search')
   @WorkspaceRoles('owner', 'admin', 'agent', 'viewer')
   search(
@@ -55,6 +77,25 @@ export class KnowledgeController {
     @Body() input: SearchKnowledgeDto,
   ) {
     return this.knowledgeService.search(workspaceId, input);
+  }
+
+  @Get(':documentId/chunks')
+  @WorkspaceRoles('owner', 'admin', 'agent', 'viewer')
+  listChunks(
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+  ) {
+    return this.knowledgeService.listChunks(workspaceId, documentId);
+  }
+
+  @Post(':documentId/reindex')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @WorkspaceRoles('owner', 'admin')
+  reindexDocument(
+    @Param('workspaceId', ParseUUIDPipe) workspaceId: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+  ): Promise<void> {
+    return this.knowledgeService.reindexDocument(workspaceId, documentId);
   }
 
   @Patch(':documentId/enabled')

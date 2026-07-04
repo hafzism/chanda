@@ -29,6 +29,12 @@ export interface CreateArticleRecord {
   workspaceId: string;
 }
 
+export interface CreateFileRecord extends CreateArticleRecord {
+  extractedObjectKey: string;
+  mimeType: string;
+  originalFileName: string;
+}
+
 export interface KnowledgeRetrievalMetadata {
   characterEnd: number;
   characterStart: number;
@@ -45,10 +51,25 @@ export interface KnowledgeRetrievalHit {
   providerScore: number;
 }
 
+export interface KnowledgeChunkSummary {
+  characterEnd: number;
+  characterStart: number;
+  content: string;
+  heading: string | null;
+  id: string;
+  ordinal: number;
+}
+
+export interface KnowledgeChunkInspection {
+  chunks: KnowledgeChunkSummary[];
+  status: KnowledgeVersionStatus;
+}
+
 export interface KnowledgeRepository {
   createQueuedArticle(
     input: CreateArticleRecord,
   ): Promise<KnowledgeDocumentSummary>;
+  createQueuedFile(input: CreateFileRecord): Promise<KnowledgeDocumentSummary>;
   deleteDocument(
     workspaceId: string,
     documentId: string,
@@ -58,6 +79,10 @@ export interface KnowledgeRepository {
     query: string,
   ): Promise<KnowledgeRetrievalHit[]>;
   list(workspaceId: string): Promise<KnowledgeDocumentSummary[]>;
+  listChunks(
+    workspaceId: string,
+    documentId: string,
+  ): Promise<KnowledgeChunkInspection | null>;
   markVersionFailed(
     versionId: string,
     errorCode: string,
@@ -73,6 +98,10 @@ export interface KnowledgeRepository {
     workspaceId: string,
     embedding: number[],
   ): Promise<KnowledgeRetrievalHit[]>;
+  reindexDocument(
+    workspaceId: string,
+    documentId: string,
+  ): Promise<'queued' | 'busy' | null>;
   setEnabled(
     workspaceId: string,
     documentId: string,

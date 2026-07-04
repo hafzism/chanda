@@ -63,6 +63,24 @@ export class ObjectStorageService
     );
   }
 
+  async putBytes(input: {
+    content: Uint8Array;
+    contentHash: string;
+    contentType: string;
+    key: string;
+  }): Promise<void> {
+    await this.ensureBucket();
+    await this.client.send(
+      new PutObjectCommand({
+        Body: input.content,
+        Bucket: this.bucket,
+        ContentType: input.contentType,
+        Key: input.key,
+        Metadata: { sha256: input.contentHash },
+      }),
+    );
+  }
+
   async getText(key: string): Promise<string> {
     await this.ensureBucket();
     const response = await this.client.send(
