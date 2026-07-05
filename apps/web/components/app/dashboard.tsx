@@ -2,6 +2,7 @@
 
 import {
   BookOpen,
+  ChartNoAxesColumnIncreasing,
   Globe2,
   Inbox,
   LogOut,
@@ -14,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Brand } from '../brand';
+import { AnalyticsPanel } from './analytics-panel';
 import { ChannelsPanel } from './channels-panel';
 import { InboxPanel } from './inbox-panel';
 import { KnowledgeLibrary } from './knowledge-library';
@@ -32,6 +34,7 @@ const navItems = [
   { icon: BookOpen, label: 'Knowledge' },
   { icon: Globe2, label: 'Channels' },
   { icon: UsersRound, label: 'Team' },
+  { icon: ChartNoAxesColumnIncreasing, label: 'Analytics' },
 ];
 
 export function Dashboard() {
@@ -216,7 +219,9 @@ export function Dashboard() {
                     ? `Manage the approved evidence Suppline can use for ${workspace.name}.`
                     : activeSection === 'Channels'
                       ? `Control which websites can send support messages to ${workspace.name}.`
-                      : `Manage who can access ${workspace.name} and what each role can do.`}
+                      : activeSection === 'Team'
+                        ? `Manage who can access ${workspace.name} and what each role can do.`
+                        : `Review ticket operations and human-controlled AI draft outcomes for ${workspace.name}.`}
               </p>
             </div>
           </div>
@@ -243,6 +248,13 @@ export function Dashboard() {
             <TeamPanel
               currentUserId={user.id}
               role={workspace.role}
+              workspaceId={workspace.id}
+            />
+          ) : activeSection === 'Analytics' ? (
+            <AnalyticsPanel
+              canManage={
+                workspace.role === 'owner' || workspace.role === 'admin'
+              }
               workspaceId={workspace.id}
             />
           ) : null}
