@@ -7,6 +7,16 @@ export interface WebChannel {
   status: 'active' | 'disconnected' | 'error';
 }
 
+export interface TelegramChannel {
+  botFirstName: string | null;
+  botUsername: string | null;
+  id: string | null;
+  lastInboundAt: string | null;
+  name: string;
+  status: 'active' | 'disconnected' | 'error';
+  webhookUrl: string | null;
+}
+
 async function channelRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`/api/v1${path}`, {
     ...init,
@@ -21,7 +31,28 @@ async function channelRequest<T>(path: string, init?: RequestInit): Promise<T> {
       : body?.message;
     throw new Error(message ?? 'The channel request could not be completed.');
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
+}
+
+export function getTelegramChannel(workspaceId: string) {
+  return channelRequest<TelegramChannel>(
+    `/workspaces/${workspaceId}/channels/telegram`,
+    { cache: 'no-store' },
+  );
+}
+
+export function connectTelegramChannel(workspaceId: string, botToken: string) {
+  return channelRequest<TelegramChannel>(
+    `/workspaces/${workspaceId}/channels/telegram`,
+    { body: JSON.stringify({ botToken }), method: 'POST' },
+  );
+}
+
+export function disconnectTelegramChannel(workspaceId: string) {
+  return channelRequest<void>(`/workspaces/${workspaceId}/channels/telegram`, {
+    method: 'DELETE',
+  });
 }
 
 export function getWebChannel(workspaceId: string) {

@@ -18,6 +18,7 @@ import {
   updateWebChannelOrigins,
   type WebChannel,
 } from '../../lib/channels';
+import { TelegramChannelCard } from './telegram-channel-card';
 
 export function ChannelsPanel({
   canManage,
@@ -345,6 +346,7 @@ export function ChannelsPanel({
           </aside>
         </div>
       </article>
+      <TelegramChannelCard canManage={canManage} workspaceId={workspaceId} />
     </section>
   );
 }
