@@ -21,6 +21,7 @@ import type {
   WidgetConversationRead,
   WidgetMessageResult,
 } from './support.types';
+import { TelegramService } from './telegram/telegram.service';
 
 export const SUPPORT_REPOSITORY = Symbol('SUPPORT_REPOSITORY');
 
@@ -39,6 +40,7 @@ export class SupportService {
     @Inject(SUPPORT_REPOSITORY)
     private readonly repository: SupportRepository,
     private readonly rateLimit: RateLimitService,
+    private readonly telegram: TelegramService,
   ) {}
 
   listInbox(workspaceId: string): Promise<InboxConversationSummary[]> {
@@ -80,12 +82,20 @@ export class SupportService {
     body: string,
     draftId?: string,
   ): Promise<InboxMessage> {
+    const normalizedBody = requireMeaningfulBody(body);
+    const externalMessageId = await this.telegram.deliverReply(
+      workspaceId,
+      conversationId,
+      normalizedBody,
+      draftId,
+    );
     const message = await this.repository.sendInboxReply(
       workspaceId,
       conversationId,
       userId,
-      requireMeaningfulBody(body),
+      normalizedBody,
       draftId,
+      externalMessageId,
     );
     if (!message) throw new NotFoundException('Conversation not found.');
     return message;

@@ -394,6 +394,7 @@ export class DrizzleSupportRepository implements SupportRepository {
     userId: string,
     body: string,
     draftId?: string,
+    externalMessageId?: string,
   ): Promise<InboxMessage | null> {
     return this.database.db.transaction(async (transaction) => {
       if (draftId) {
@@ -433,6 +434,7 @@ export class DrizzleSupportRepository implements SupportRepository {
           channelConnectionId: conversation.channelConnectionId,
           conversationId,
           direction: 'outbound',
+          externalMessageId,
           ...(draftId ? { metadata: { aiDraftId: draftId } } : {}),
           occurredAt,
           workspaceId,

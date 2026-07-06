@@ -165,6 +165,7 @@ export interface SupportRepository {
     userId: string,
     body: string,
     draftId?: string,
+    externalMessageId?: string,
   ): Promise<InboxMessage | null>;
   updateTicket(
     workspaceId: string,
