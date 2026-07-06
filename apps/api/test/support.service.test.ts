@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RateLimitService } from '../src/support/rate-limit.service';
 import { SupportService } from '../src/support/support.service';
 import type { SupportRepository } from '../src/support/support.types';
+import type { TelegramService } from '../src/support/telegram/telegram.service';
 
 describe('SupportService', () => {
   const ingestMock = vi.fn<SupportRepository['ingestWidgetMessage']>();
@@ -57,6 +58,9 @@ describe('SupportService', () => {
         consumeWidgetMessage: consumeMock,
         consumeWidgetRead: consumeReadMock,
       } as unknown as RateLimitService,
+      {
+        deliverReply: vi.fn().mockResolvedValue(undefined),
+      } as unknown as TelegramService,
     );
   });
 
@@ -213,6 +217,7 @@ describe('SupportService', () => {
       'conversation-1',
       'user-1',
       'Thanks for contacting us.',
+      undefined,
       undefined,
     );
     await expect(
