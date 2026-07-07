@@ -2,7 +2,9 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   char,
+  check,
   customType,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -55,6 +57,8 @@ export const supportChannelKind = pgEnum('support_channel_kind', [
   'telegram',
   'whatsapp',
   'gmail',
+  'facebook',
+  'instagram',
 ]);
 
 export const channelConnectionStatus = pgEnum('channel_connection_status', [
@@ -99,6 +103,35 @@ export const ticketPriority = pgEnum('ticket_priority', [
   'high',
   'urgent',
 ]);
+
+export const aiDraftStatus = pgEnum('ai_draft_status', [
+  'generated',
+  'sent',
+  'superseded',
+]);
+
+export const billingSubscriptionStatus = pgEnum('billing_subscription_status', [
+  'incomplete',
+  'incomplete_expired',
+  'trialing',
+  'active',
+  'past_due',
+  'canceled',
+  'unpaid',
+  'paused',
+]);
+
+export interface StoredAiDraftCitation {
+  characterEnd: number;
+  characterStart: number;
+  content: string;
+  documentId: string;
+  heading: string | null;
+  keywordRank: number | null;
+  semanticRank: number | null;
+  title: string;
+  versionId: string;
+}
 
 export const users = pgTable(
   'users',
@@ -160,6 +193,63 @@ export const workspaceMembers = pgTable(
   ],
 );
 
+export const workspaceBillingAccounts = pgTable(
+  'workspace_billing_accounts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    stripeCustomerId: text('stripe_customer_id').notNull(),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    stripePriceId: text('stripe_price_id'),
+    subscriptionStatus: billingSubscriptionStatus('subscription_status'),
+    currentPeriodEnd: timestamp('current_period_end', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false).notNull(),
+    latestStripeEventCreatedAt: timestamp('latest_stripe_event_created_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('workspace_billing_accounts_workspace_unique').on(
+      table.workspaceId,
+    ),
+    uniqueIndex('workspace_billing_accounts_customer_unique').on(
+      table.stripeCustomerId,
+    ),
+    uniqueIndex('workspace_billing_accounts_subscription_unique')
+      .on(table.stripeSubscriptionId)
+      .where(sql`${table.stripeSubscriptionId} is not null`),
+  ],
+);
+
+export const stripeWebhookEvents = pgTable(
+  'stripe_webhook_events',
+  {
+    eventId: text('event_id').primaryKey(),
+    eventType: text('event_type').notNull(),
+    eventCreatedAt: timestamp('event_created_at', {
+      mode: 'date',
+      withTimezone: true,
+    }).notNull(),
+    workspaceId: uuid('workspace_id').references(() => workspaces.id, {
+      onDelete: 'set null',
+    }),
+    processedAt: timestamp('processed_at', { mode: 'date', withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index('stripe_webhook_events_workspace_idx').on(table.workspaceId),
+    index('stripe_webhook_events_created_idx').on(table.eventCreatedAt),
+  ],
+);
+
 export const sessions = pgTable(
   'sessions',
   {
@@ -208,13 +298,21 @@ export const workspaceInvitations = pgTable(
       mode: 'date',
       withTimezone: true,
     }),
+    revokedAt: timestamp('revoked_at', {
+      mode: 'date',
+      withTimezone: true,
+    }),
     createdAt: timestamps.createdAt,
   },
   (table) => [
+    check(
+      'workspace_invitations_role_not_owner',
+      sql`${table.role} <> 'owner'`,
+    ),
     uniqueIndex('workspace_invitations_token_hash_unique').on(table.tokenHash),
     uniqueIndex('workspace_invitations_pending_email_unique')
       .on(table.workspaceId, table.email)
-      .where(sql`${table.acceptedAt} is null`),
+      .where(sql`${table.acceptedAt} is null and ${table.revokedAt} is null`),
     index('workspace_invitations_workspace_idx').on(table.workspaceId),
   ],
 );
@@ -254,6 +352,7 @@ export const knowledgeDocumentVersions = pgTable(
     originalFilename: text('original_filename'),
     mimeType: text('mime_type').notNull(),
     objectKey: text('object_key').notNull(),
+    extractedObjectKey: text('extracted_object_key'),
     contentHash: char('content_hash', { length: 64 }).notNull(),
     byteSize: integer('byte_size').notNull(),
     status: knowledgeVersionStatus('status').default('queued').notNull(),
@@ -349,10 +448,9 @@ export const outboxEvents = pgTable(
     createdAt: timestamps.createdAt,
   },
   (table) => [
-    uniqueIndex('outbox_events_topic_aggregate_unique').on(
-      table.topic,
-      table.aggregateId,
-    ),
+    uniqueIndex('outbox_events_topic_aggregate_unique')
+      .on(table.topic, table.aggregateId)
+      .where(sql`${table.publishedAt} is null`),
     index('outbox_events_pending_idx')
       .on(table.availableAt, table.createdAt)
       .where(sql`${table.publishedAt} is null`),
@@ -375,6 +473,10 @@ export const channelConnections = pgTable(
       .array()
       .default(sql`ARRAY[]::text[]`)
       .notNull(),
+    settings: jsonb('settings')
+      .$type<Record<string, unknown>>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
     lastInboundAt: timestamp('last_inbound_at', {
       mode: 'date',
       withTimezone: true,
@@ -390,6 +492,57 @@ export const channelConnections = pgTable(
       .on(table.publicKey)
       .where(sql`${table.publicKey} is not null`),
     index('channel_connections_workspace_idx').on(table.workspaceId),
+  ],
+);
+
+export const channelConnectionSecrets = pgTable(
+  'channel_connection_secrets',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    channelConnectionId: uuid('channel_connection_id')
+      .notNull()
+      .references(() => channelConnections.id, { onDelete: 'cascade' }),
+    encryptedCredentials: text('encrypted_credentials').notNull(),
+    encryptionKeyVersion: integer('encryption_key_version')
+      .default(1)
+      .notNull(),
+    webhookSecretHash: char('webhook_secret_hash', { length: 64 }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('channel_connection_secrets_connection_unique').on(
+      table.channelConnectionId,
+    ),
+    index('channel_connection_secrets_workspace_idx').on(table.workspaceId),
+  ],
+);
+
+export const oauthConnectionStates = pgTable(
+  'oauth_connection_states',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    stateHash: char('state_hash', { length: 64 }).notNull(),
+    provider: text('provider').notNull(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    requestedByUserId: uuid('requested_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', {
+      mode: 'date',
+      withTimezone: true,
+    }).notNull(),
+    usedAt: timestamp('used_at', { mode: 'date', withTimezone: true }),
+    createdAt: timestamps.createdAt,
+  },
+  (table) => [
+    uniqueIndex('oauth_connection_states_hash_unique').on(table.stateHash),
+    index('oauth_connection_states_expiry_idx').on(table.expiresAt),
+    index('oauth_connection_states_workspace_idx').on(table.workspaceId),
   ],
 );
 
@@ -452,6 +605,7 @@ export const conversations = pgTable(
       .notNull()
       .references(() => channelConnections.id, { onDelete: 'restrict' }),
     externalThreadId: text('external_thread_id').notNull(),
+    publicAccessTokenHash: char('public_access_token_hash', { length: 64 }),
     subject: text('subject'),
     status: conversationStatus('status').default('open').notNull(),
     lastMessageAt: timestamp('last_message_at', {
@@ -593,5 +747,140 @@ export const ticketNotes = pgTable(
       table.ticketId,
       table.createdAt,
     ),
+  ],
+);
+
+export const aiDrafts = pgTable(
+  'ai_drafts',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'cascade' }),
+    conversationId: uuid('conversation_id')
+      .notNull()
+      .references(() => conversations.id, { onDelete: 'cascade' }),
+    inputMessageId: uuid('input_message_id')
+      .notNull()
+      .references(() => messages.id, { onDelete: 'restrict' }),
+    status: aiDraftStatus('status').default('generated').notNull(),
+    body: text('body').notNull(),
+    finalBody: text('final_body'),
+    provider: text('provider').notNull(),
+    model: text('model').notNull(),
+    promptVersion: text('prompt_version').notNull(),
+    retrievalMode: text('retrieval_mode').notNull(),
+    readinessScore: integer('readiness_score').notNull(),
+    requiresHuman: boolean('requires_human').notNull(),
+    escalationReason: text('escalation_reason'),
+    citations: jsonb('citations')
+      .$type<StoredAiDraftCitation[]>()
+      .default(sql`'[]'::jsonb`)
+      .notNull(),
+    requestedByUserId: uuid('requested_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    sentByUserId: uuid('sent_by_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    sentAt: timestamp('sent_at', { mode: 'date', withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index('ai_drafts_workspace_ticket_created_idx').on(
+      table.workspaceId,
+      table.ticketId,
+      table.createdAt,
+    ),
+    index('ai_drafts_workspace_status_idx').on(table.workspaceId, table.status),
+  ],
+);
+
+export const retrievalEvaluationCases = pgTable(
+  'retrieval_evaluation_cases',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    question: text('question').notNull(),
+    expectedDocumentId: uuid('expected_document_id')
+      .notNull()
+      .references(() => knowledgeDocuments.id, { onDelete: 'cascade' }),
+    createdByUserId: uuid('created_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('retrieval_evaluation_cases_workspace_question_unique').on(
+      table.workspaceId,
+      table.question,
+    ),
+    index('retrieval_evaluation_cases_workspace_idx').on(table.workspaceId),
+  ],
+);
+
+export const retrievalEvaluationRuns = pgTable(
+  'retrieval_evaluation_runs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    caseCount: integer('case_count').notNull(),
+    hitCount: integer('hit_count').notNull(),
+    hitRate: doublePrecision('hit_rate').notNull(),
+    meanReciprocalRank: doublePrecision('mean_reciprocal_rank').notNull(),
+    hybridCaseCount: integer('hybrid_case_count').notNull(),
+    keywordOnlyCaseCount: integer('keyword_only_case_count').notNull(),
+    topK: integer('top_k').notNull(),
+    requestedByUserId: uuid('requested_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    createdAt: timestamps.createdAt,
+  },
+  (table) => [
+    index('retrieval_evaluation_runs_workspace_created_idx').on(
+      table.workspaceId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const retrievalEvaluationResults = pgTable(
+  'retrieval_evaluation_results',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    workspaceId: uuid('workspace_id')
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    runId: uuid('run_id')
+      .notNull()
+      .references(() => retrievalEvaluationRuns.id, { onDelete: 'cascade' }),
+    caseId: uuid('case_id').references(() => retrievalEvaluationCases.id, {
+      onDelete: 'set null',
+    }),
+    questionSnapshot: text('question_snapshot').notNull(),
+    expectedDocumentId: uuid('expected_document_id').references(
+      () => knowledgeDocuments.id,
+      { onDelete: 'set null' },
+    ),
+    expectedDocumentTitle: text('expected_document_title').notNull(),
+    retrievedDocumentIds: jsonb('retrieved_document_ids')
+      .$type<string[]>()
+      .default(sql`'[]'::jsonb`)
+      .notNull(),
+    retrievalMode: text('retrieval_mode').notNull(),
+    reciprocalRank: doublePrecision('reciprocal_rank').notNull(),
+    wasHit: boolean('was_hit').notNull(),
+    createdAt: timestamps.createdAt,
+  },
+  (table) => [
+    index('retrieval_evaluation_results_run_idx').on(table.runId),
+    index('retrieval_evaluation_results_workspace_idx').on(table.workspaceId),
   ],
 );

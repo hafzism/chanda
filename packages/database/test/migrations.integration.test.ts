@@ -115,6 +115,24 @@ describe('database migrations', () => {
     expect(indexes.rows[1]?.indexdef).toContain('vector_cosine_ops');
   });
 
+  it('stores a separate extracted source key for uploaded knowledge files', async () => {
+    const columns = await client.db.execute<{
+      data_type: string;
+      is_nullable: string;
+    }>(sql`
+      select data_type, is_nullable
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'knowledge_document_versions'
+        and column_name = 'extracted_object_key'
+    `);
+
+    expect(columns.rows[0]).toEqual({
+      data_type: 'text',
+      is_nullable: 'YES',
+    });
+  });
+
   it('creates a deduplicated pending-event outbox index', async () => {
     const indexes = await client.db.execute<{
       indexdef: string;
@@ -136,6 +154,7 @@ describe('database migrations', () => {
     ]);
     expect(indexes.rows[0]?.indexdef).toContain('published_at IS NULL');
     expect(indexes.rows[1]?.indexdef).toContain('UNIQUE');
+    expect(indexes.rows[1]?.indexdef).toContain('published_at IS NULL');
   });
 
   it('creates idempotent channel messages and tenant ticket indexes', async () => {
@@ -180,5 +199,235 @@ describe('database migrations', () => {
 
     expect(columns.rows[0]?.is_nullable).toBe('NO');
     expect(columns.rows[0]?.column_default).toContain('ARRAY[]');
+  });
+
+  it('stores only a fixed-length widget conversation capability hash', async () => {
+    const columns = await client.db.execute<{
+      character_maximum_length: number;
+      data_type: string;
+      is_nullable: string;
+    }>(sql`
+      select data_type, character_maximum_length, is_nullable
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'conversations'
+        and column_name = 'public_access_token_hash'
+    `);
+
+    expect(columns.rows[0]).toEqual({
+      character_maximum_length: 64,
+      data_type: 'character',
+      is_nullable: 'YES',
+    });
+  });
+
+  it('creates auditable AI drafts with tenant and status indexes', async () => {
+    const indexes = await client.db.execute<{
+      indexname: string;
+    }>(sql`
+      select indexname
+      from pg_indexes
+      where tablename = 'ai_drafts'
+        and indexname in (
+          'ai_drafts_workspace_status_idx',
+          'ai_drafts_workspace_ticket_created_idx'
+        )
+      order by indexname
+    `);
+    const columns = await client.db.execute<{
+      column_name: string;
+    }>(sql`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'ai_drafts'
+        and column_name in (
+          'citations',
+          'model',
+          'prompt_version',
+          'readiness_score',
+          'requires_human'
+        )
+      order by column_name
+    `);
+
+    expect(indexes.rows.map((row) => row.indexname)).toEqual([
+      'ai_drafts_workspace_status_idx',
+      'ai_drafts_workspace_ticket_created_idx',
+    ]);
+    expect(columns.rows.map((row) => row.column_name)).toEqual([
+      'citations',
+      'model',
+      'prompt_version',
+      'readiness_score',
+      'requires_human',
+    ]);
+  });
+
+  it('supports revocable invitations with one active invite per email', async () => {
+    const columns = await client.db.execute<{ column_name: string }>(sql`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'workspace_invitations'
+        and column_name = 'revoked_at'
+    `);
+    const indexes = await client.db.execute<{ indexdef: string }>(sql`
+      select indexdef
+      from pg_indexes
+      where tablename = 'workspace_invitations'
+        and indexname = 'workspace_invitations_pending_email_unique'
+    `);
+    const constraints = await client.db.execute<{ definition: string }>(sql`
+      select pg_get_constraintdef(oid) as definition
+      from pg_constraint
+      where conname = 'workspace_invitations_role_not_owner'
+    `);
+
+    expect(columns.rows).toHaveLength(1);
+    expect(indexes.rows[0]?.indexdef).toContain('accepted_at IS NULL');
+    expect(indexes.rows[0]?.indexdef).toContain('revoked_at IS NULL');
+    expect(constraints.rows[0]?.definition).toContain("role <> 'owner'");
+  });
+
+  it('persists tenant-scoped retrieval evaluation cases and immutable runs', async () => {
+    const tables = await client.db.execute<{ table_name: string }>(sql`
+      select table_name
+      from information_schema.tables
+      where table_schema = 'public'
+        and table_name in (
+          'retrieval_evaluation_cases',
+          'retrieval_evaluation_results',
+          'retrieval_evaluation_runs'
+        )
+      order by table_name
+    `);
+    const indexes = await client.db.execute<{ indexname: string }>(sql`
+      select indexname
+      from pg_indexes
+      where indexname in (
+        'retrieval_evaluation_cases_workspace_question_unique',
+        'retrieval_evaluation_results_run_idx',
+        'retrieval_evaluation_runs_workspace_created_idx'
+      )
+      order by indexname
+    `);
+
+    expect(tables.rows.map((row) => row.table_name)).toEqual([
+      'retrieval_evaluation_cases',
+      'retrieval_evaluation_results',
+      'retrieval_evaluation_runs',
+    ]);
+    expect(indexes.rows.map((row) => row.indexname)).toEqual([
+      'retrieval_evaluation_cases_workspace_question_unique',
+      'retrieval_evaluation_results_run_idx',
+      'retrieval_evaluation_runs_workspace_created_idx',
+    ]);
+  });
+
+  it('stores channel credentials separately from public connection metadata', async () => {
+    const columns = await client.db.execute<{ column_name: string }>(sql`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'channel_connection_secrets'
+      order by column_name
+    `);
+    const settings = await client.db.execute<{ column_name: string }>(sql`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'channel_connections'
+        and column_name = 'settings'
+    `);
+    const indexes = await client.db.execute<{ indexname: string }>(sql`
+      select indexname
+      from pg_indexes
+      where indexname = 'channel_connection_secrets_connection_unique'
+    `);
+
+    expect(columns.rows.map(({ column_name }) => column_name)).toContain(
+      'encrypted_credentials',
+    );
+    expect(columns.rows.map(({ column_name }) => column_name)).toContain(
+      'webhook_secret_hash',
+    );
+    expect(settings.rows).toHaveLength(1);
+    expect(indexes.rows).toHaveLength(1);
+  });
+
+  it('stores expiring one-time OAuth state without requiring webhook credentials', async () => {
+    const oauthColumns = await client.db.execute<{ column_name: string }>(sql`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'oauth_connection_states'
+      order by column_name
+    `);
+    const webhookColumn = await client.db.execute<{ is_nullable: string }>(sql`
+      select is_nullable
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'channel_connection_secrets'
+        and column_name = 'webhook_secret_hash'
+    `);
+    const indexes = await client.db.execute<{ indexname: string }>(sql`
+      select indexname
+      from pg_indexes
+      where indexname in (
+        'oauth_connection_states_expiry_idx',
+        'oauth_connection_states_hash_unique',
+        'oauth_connection_states_workspace_idx'
+      )
+      order by indexname
+    `);
+
+    expect(oauthColumns.rows.map(({ column_name }) => column_name)).toEqual(
+      expect.arrayContaining([
+        'expires_at',
+        'state_hash',
+        'used_at',
+        'workspace_id',
+      ]),
+    );
+    expect(webhookColumn.rows[0]?.is_nullable).toBe('YES');
+    expect(indexes.rows).toHaveLength(3);
+  });
+
+  it('supports separate Facebook and Instagram channel connections', async () => {
+    const values = await client.db.execute<{ value: string }>(sql`
+      select value
+      from unnest(enum_range(null::support_channel_kind)) as value
+      where value::text in ('facebook', 'instagram')
+      order by value::text
+    `);
+
+    expect(values.rows.map(({ value }) => value)).toEqual([
+      'facebook',
+      'instagram',
+    ]);
+  });
+
+  it('persists one billing account per workspace and idempotent Stripe events', async () => {
+    const indexes = await client.db.execute<{ indexname: string }>(sql`
+      select indexname
+      from pg_indexes
+      where indexname in (
+        'workspace_billing_accounts_workspace_unique',
+        'workspace_billing_accounts_customer_unique',
+        'stripe_webhook_events_pkey'
+      )
+      order by indexname
+    `);
+    const statuses = await client.db.execute<{ value: string }>(sql`
+      select value
+      from unnest(enum_range(null::billing_subscription_status)) as value
+      order by value::text
+    `);
+
+    expect(indexes.rows).toHaveLength(3);
+    expect(statuses.rows.map(({ value }) => value)).toEqual(
+      expect.arrayContaining(['active', 'past_due', 'canceled', 'unpaid']),
+    );
   });
 });
