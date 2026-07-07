@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  billingSubscriptionStatus,
   conversationStatus,
   channelConnections,
   knowledgeSourceKind,
@@ -11,6 +12,7 @@ import {
   ticketStatus,
   outboxEvents,
   workspaceRole,
+  workspaceBillingAccounts,
 } from '../src/schema';
 
 describe('workspace roles', () => {
@@ -31,6 +33,8 @@ describe('normalized support domain enums', () => {
       'telegram',
       'whatsapp',
       'gmail',
+      'facebook',
+      'instagram',
     ]);
     expect(conversationStatus.enumValues).toEqual([
       'open',
@@ -76,5 +80,22 @@ describe('knowledge lifecycle enums', () => {
       'ready',
       'failed',
     ]);
+  });
+});
+
+describe('workspace billing state', () => {
+  it('models asynchronous Stripe subscription states explicitly', () => {
+    expect(billingSubscriptionStatus.enumValues).toEqual([
+      'incomplete',
+      'incomplete_expired',
+      'trialing',
+      'active',
+      'past_due',
+      'canceled',
+      'unpaid',
+      'paused',
+    ]);
+    expect(workspaceBillingAccounts.stripeCustomerId).toBeDefined();
+    expect(workspaceBillingAccounts.latestStripeEventCreatedAt).toBeDefined();
   });
 });
