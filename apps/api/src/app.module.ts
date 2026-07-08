@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { join } from 'node:path';
 
 import { AuthModule } from './auth/auth.module';
+import { BillingModule } from './billing/billing.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
@@ -24,6 +25,7 @@ import { WorkspaceModule } from './workspaces/workspace.module';
     DatabaseModule,
     StorageModule,
     AuthModule,
+    BillingModule,
     AnalyticsModule,
     WorkspaceModule,
     KnowledgeModule,
