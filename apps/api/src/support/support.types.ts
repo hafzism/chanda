@@ -29,7 +29,7 @@ export interface WidgetConnectionPolicy {
 }
 
 export interface InboxConversationSummary {
-  channel: 'web' | 'telegram' | 'whatsapp' | 'gmail';
+  channel: 'web' | 'telegram' | 'whatsapp' | 'gmail' | 'facebook' | 'instagram';
   conversationId: string;
   customerDisplayName: string | null;
   customerEmail: string | null;

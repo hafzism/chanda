@@ -170,7 +170,11 @@ export class DrizzleTelegramRepository implements TelegramRepository {
       )
       .where(eq(channelConnectionSecrets.channelConnectionId, connectionId))
       .limit(1);
-    return credential ?? null;
+    if (!credential?.webhookSecretHash) return null;
+    return {
+      encryptedCredentials: credential.encryptedCredentials,
+      webhookSecretHash: credential.webhookSecretHash,
+    };
   }
 
   async findDeliveryContext(

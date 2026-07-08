@@ -6,9 +6,12 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { RateLimitService } from '../src/support/rate-limit.service';
+import type { GmailService } from '../src/support/gmail/gmail.service';
+import type { MetaMessagingService } from '../src/support/meta/meta-messaging.service';
 import { SupportService } from '../src/support/support.service';
 import type { SupportRepository } from '../src/support/support.types';
 import type { TelegramService } from '../src/support/telegram/telegram.service';
+import type { WhatsAppService } from '../src/support/whatsapp/whatsapp.service';
 
 describe('SupportService', () => {
   const ingestMock = vi.fn<SupportRepository['ingestWidgetMessage']>();
@@ -61,6 +64,15 @@ describe('SupportService', () => {
       {
         deliverReply: vi.fn().mockResolvedValue(undefined),
       } as unknown as TelegramService,
+      {
+        deliverReply: vi.fn().mockResolvedValue(undefined),
+      } as unknown as GmailService,
+      {
+        deliverReply: vi.fn().mockResolvedValue(undefined),
+      } as unknown as WhatsAppService,
+      {
+        deliverReply: vi.fn().mockResolvedValue(undefined),
+      } as unknown as MetaMessagingService,
     );
   });
 

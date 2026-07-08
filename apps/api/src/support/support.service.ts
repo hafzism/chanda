@@ -9,6 +9,8 @@ import {
 } from '@nestjs/common';
 
 import type { IngestWidgetMessageDto } from './dto/ingest-widget-message.dto';
+import { GmailService } from './gmail/gmail.service';
+import { MetaMessagingService } from './meta/meta-messaging.service';
 import { RateLimitService } from './rate-limit.service';
 import type {
   InboxConversationDetail,
@@ -22,6 +24,7 @@ import type {
   WidgetMessageResult,
 } from './support.types';
 import { TelegramService } from './telegram/telegram.service';
+import { WhatsAppService } from './whatsapp/whatsapp.service';
 
 export const SUPPORT_REPOSITORY = Symbol('SUPPORT_REPOSITORY');
 
@@ -41,6 +44,9 @@ export class SupportService {
     private readonly repository: SupportRepository,
     private readonly rateLimit: RateLimitService,
     private readonly telegram: TelegramService,
+    private readonly gmail: GmailService,
+    private readonly whatsapp: WhatsAppService,
+    private readonly metaMessaging: MetaMessagingService,
   ) {}
 
   listInbox(workspaceId: string): Promise<InboxConversationSummary[]> {
@@ -83,12 +89,36 @@ export class SupportService {
     draftId?: string,
   ): Promise<InboxMessage> {
     const normalizedBody = requireMeaningfulBody(body);
-    const externalMessageId = await this.telegram.deliverReply(
+    const telegramMessageId = await this.telegram.deliverReply(
       workspaceId,
       conversationId,
       normalizedBody,
       draftId,
     );
+    const gmailMessageId =
+      telegramMessageId ??
+      (await this.gmail.deliverReply(
+        workspaceId,
+        conversationId,
+        normalizedBody,
+        draftId,
+      ));
+    const whatsappMessageId =
+      gmailMessageId ??
+      (await this.whatsapp.deliverReply(
+        workspaceId,
+        conversationId,
+        normalizedBody,
+        draftId,
+      ));
+    const externalMessageId =
+      whatsappMessageId ??
+      (await this.metaMessaging.deliverReply(
+        workspaceId,
+        conversationId,
+        normalizedBody,
+        draftId,
+      ));
     const message = await this.repository.sendInboxReply(
       workspaceId,
       conversationId,
