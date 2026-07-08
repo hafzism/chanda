@@ -18,6 +18,84 @@
   --shadow: 0 20px 55px rgb(65 39 27 / 10%);
 }
 
+.billing-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 20px;
+}
+.billing-plan-card,
+.billing-details,
+.billing-state {
+  background: var(--surface, #fffaf5);
+  border: 1px solid #ead8ca;
+  border-radius: 18px;
+  padding: 24px;
+}
+.billing-plan-heading {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.billing-plan-heading > span {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #f7dfcf;
+  color: #9b4628;
+}
+.billing-plan-card h2,
+.billing-details h2 {
+  margin: 3px 0 10px;
+  color: #3c251d;
+}
+.billing-period,
+.billing-permission,
+.billing-fineprint {
+  color: #76594d;
+  font-size: 0.9rem;
+}
+.billing-plan-card .button {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.billing-details ul {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.billing-details li {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  color: #4d3329;
+}
+.billing-details li svg {
+  color: #aa4f2f;
+}
+.billing-notice {
+  grid-column: 1 / -1;
+  padding: 13px 15px;
+  border: 1px solid #dfa98f;
+  border-radius: 12px;
+  background: #fff3eb;
+  color: #6d3421;
+}
+.billing-notice.neutral {
+  border-color: #dacdc4;
+  background: #f8f3ef;
+  color: #5e5048;
+}
+@media (max-width: 760px) {
+  .billing-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .team-panel {
   display: grid;
   gap: 1rem;
@@ -2881,7 +2959,9 @@ input:focus-visible {
 .channel-details > p {
   margin-bottom: 1.25rem;
 }
-.telegram-card-loading {
+.telegram-card-loading,
+.gmail-card-loading,
+.whatsapp-card-loading {
   display: flex;
   min-height: 8rem;
   gap: 0.6rem;
@@ -2892,6 +2972,748 @@ input:focus-visible {
 }
 .telegram-body {
   padding: 1.2rem 1.3rem;
+}
+.gmail-body {
+  padding: 1.2rem 1.3rem;
+}
+.whatsapp-body {
+  padding: 1.2rem 1.3rem;
+}
+.whatsapp-summary {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.whatsapp-summary strong,
+.whatsapp-guide-heading strong {
+  display: block;
+  font-size: 0.76rem;
+}
+.whatsapp-summary p,
+.whatsapp-guide-heading p {
+  max-width: 43rem;
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.55;
+}
+.whatsapp-summary > span {
+  flex: 0 0 auto;
+  border: 1px solid;
+  border-radius: 2rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+.whatsapp-summary > span.verified {
+  border-color: #aac4af;
+  background: #edf4ee;
+  color: var(--success);
+}
+.whatsapp-summary > span.pending {
+  border-color: #d4b08d;
+  background: #fff6eb;
+  color: #875321;
+}
+.whatsapp-webhook-setup {
+  margin-top: 1rem;
+  border: 1px solid #d4b08d;
+  border-radius: 0.55rem;
+  background: #fffaf3;
+  padding: 1rem;
+}
+.whatsapp-webhook-setup h3 {
+  margin: 0;
+  font-size: 0.74rem;
+}
+.whatsapp-webhook-setup > ol,
+.whatsapp-guide > ol {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0.7rem 0;
+  padding-left: 1.2rem;
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+.whatsapp-webhook-setup li::marker,
+.whatsapp-guide li::marker {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+.whatsapp-webhook-setup code,
+.whatsapp-expiry-note code {
+  border-radius: 0.24rem;
+  background: #eee5dd;
+  padding: 0.06rem 0.22rem;
+  font-size: 0.92em;
+}
+.whatsapp-webhook-value {
+  margin-top: 0.65rem;
+}
+.whatsapp-webhook-value > label {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--muted);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.whatsapp-webhook-value > div {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  border: 1px solid var(--border-dark);
+  border-radius: 0.42rem;
+  background: var(--paper);
+  padding: 0.5rem 0.55rem;
+}
+.whatsapp-webhook-value code {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  color: var(--ink-soft);
+  font-size: 0.61rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+.whatsapp-webhook-value button {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+.whatsapp-token-lost {
+  margin: 0.7rem 0;
+  color: #875321;
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+.whatsapp-webhook-setup > .button {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  width: auto;
+  margin-top: 0.75rem;
+}
+.whatsapp-operating-note {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-top: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: #fbf7f2;
+  padding: 0.75rem;
+  color: var(--accent-dark);
+}
+.whatsapp-operating-note svg {
+  flex: 0 0 auto;
+}
+.whatsapp-operating-note p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+.whatsapp-connected dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1rem 0 0;
+}
+.whatsapp-connected dl > div {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: #fbf7f2;
+  padding: 0.72rem;
+}
+.whatsapp-connected dt {
+  color: var(--muted);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.whatsapp-connected dd {
+  overflow: hidden;
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+}
+.whatsapp-actions {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+.whatsapp-actions .button {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  text-decoration: none;
+}
+.whatsapp-disconnect {
+  margin-left: auto;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.whatsapp-disconnect.armed {
+  border-color: #d8aaa0;
+  background: #fff1ed;
+  color: var(--danger);
+}
+.whatsapp-setup {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(17rem, 0.8fr);
+  gap: 1.2rem;
+}
+.whatsapp-guide-heading {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.whatsapp-guide-heading a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.3rem;
+  align-items: center;
+  color: var(--accent-dark);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+.whatsapp-expiry-note {
+  margin: 0.7rem 0 0;
+  border-left: 2px solid var(--accent);
+  padding-left: 0.7rem;
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+.whatsapp-setup form {
+  border-left: 1px solid var(--border);
+  padding-left: 1.2rem;
+}
+.whatsapp-setup form > label {
+  display: block;
+  margin: 0.75rem 0 0.35rem;
+  color: var(--ink-soft);
+  font-size: 0.61rem;
+  font-weight: 800;
+}
+.whatsapp-setup form > label:first-child {
+  margin-top: 0;
+}
+.whatsapp-setup form > input,
+.whatsapp-secret-input {
+  width: 100%;
+  border: 1px solid var(--border-dark);
+  border-radius: 0.45rem;
+  background: var(--paper);
+}
+.whatsapp-setup form > input {
+  padding: 0.68rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.67rem;
+}
+.whatsapp-secret-input {
+  display: flex;
+  overflow: hidden;
+}
+.whatsapp-setup form > input:focus,
+.whatsapp-secret-input:focus-within {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent-soft);
+}
+.whatsapp-secret-input input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0.68rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.67rem;
+}
+.whatsapp-secret-input button {
+  display: grid;
+  width: 2.4rem;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+}
+.whatsapp-setup form > p {
+  margin: 0.6rem 0 0;
+  color: var(--muted);
+  font-size: 0.57rem;
+  line-height: 1.5;
+}
+.meta-channel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.meta-card-loading {
+  display: flex;
+  min-height: 9rem;
+  gap: 0.55rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.67rem;
+}
+.meta-card > header {
+  padding: 1rem;
+}
+.meta-card-body {
+  padding: 1rem;
+}
+.meta-connected > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.55;
+}
+.meta-webhook-setup {
+  margin-top: 0.8rem;
+  border: 1px solid #d4b08d;
+  border-radius: 0.5rem;
+  background: #fffaf3;
+  padding: 0.8rem;
+}
+.meta-webhook-setup > ol,
+.meta-guide > ol {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.7rem;
+  padding-left: 1.15rem;
+  color: var(--ink-soft);
+  font-size: 0.6rem;
+  line-height: 1.5;
+}
+.meta-webhook-setup li::marker,
+.meta-guide li::marker {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+.meta-webhook-value {
+  margin-top: 0.55rem;
+}
+.meta-webhook-value > label {
+  display: block;
+  margin-bottom: 0.27rem;
+  color: var(--muted);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.meta-webhook-value > div {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  border: 1px solid var(--border-dark);
+  border-radius: 0.4rem;
+  background: var(--paper);
+  padding: 0.45rem 0.5rem;
+}
+.meta-webhook-value code {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  color: var(--ink-soft);
+  font-size: 0.57rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+.meta-webhook-value button {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 0.55rem;
+  font-weight: 800;
+}
+.meta-token-lost {
+  margin: 0.6rem 0;
+  color: #875321;
+  font-size: 0.58rem;
+  line-height: 1.45;
+}
+.meta-webhook-setup > .button {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  width: auto;
+  margin-top: 0.65rem;
+}
+.meta-connected dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0.8rem 0 0;
+}
+.meta-connected dl > div {
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: #fbf7f2;
+  padding: 0.65rem;
+}
+.meta-connected dt {
+  color: var(--muted);
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.meta-connected dd {
+  overflow: hidden;
+  margin: 0.2rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.58rem;
+  text-overflow: ellipsis;
+}
+.meta-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.8rem;
+}
+.meta-actions a,
+.meta-actions button {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 0.56rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.meta-actions button:last-child {
+  margin-left: auto;
+  color: var(--muted);
+}
+.meta-actions button.danger {
+  border-radius: 0.35rem;
+  background: #fff1ed;
+  padding: 0.35rem;
+  color: var(--danger);
+}
+.meta-setup {
+  display: grid;
+  gap: 0.9rem;
+}
+.meta-guide strong {
+  display: block;
+  font-size: 0.7rem;
+}
+.meta-guide > p {
+  margin: 0.25rem 0 0.7rem;
+  color: var(--muted);
+  font-size: 0.59rem;
+  line-height: 1.5;
+}
+.meta-guide .meta-test-boundary {
+  margin: 0.7rem 0 0;
+  border-left: 2px solid var(--accent);
+  padding-left: 0.6rem;
+  color: #875321;
+}
+.meta-setup form {
+  border-top: 1px solid var(--border);
+  padding-top: 0.8rem;
+}
+.meta-setup form > label {
+  display: block;
+  margin: 0.6rem 0 0.3rem;
+  color: var(--ink-soft);
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+.meta-setup form > label:first-child {
+  margin-top: 0;
+}
+.meta-setup form > input,
+.meta-secret-input {
+  width: 100%;
+  border: 1px solid var(--border-dark);
+  border-radius: 0.42rem;
+  background: var(--paper);
+}
+.meta-setup form > input {
+  padding: 0.62rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.62rem;
+}
+.meta-secret-input {
+  display: flex;
+  overflow: hidden;
+}
+.meta-setup form > input:focus,
+.meta-secret-input:focus-within {
+  border-color: var(--accent);
+  outline: 3px solid var(--accent-soft);
+}
+.meta-secret-input input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0.62rem;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.62rem;
+}
+.meta-secret-input button {
+  display: grid;
+  width: 2.2rem;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+}
+.meta-form-actions {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+.meta-form-actions .button {
+  width: auto;
+}
+.meta-viewer-empty {
+  display: flex;
+  min-height: 5rem;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-dark);
+}
+.meta-viewer-empty p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+.meta-card-body .channel-message button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+}
+.gmail-summary {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.gmail-summary strong,
+.gmail-ready-to-connect strong,
+.gmail-guide-heading strong {
+  display: block;
+  font-size: 0.76rem;
+}
+.gmail-summary p,
+.gmail-ready-to-connect p,
+.gmail-guide-heading p {
+  max-width: 43rem;
+  margin: 0.3rem 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.55;
+}
+.gmail-sync-warning {
+  flex: 0 0 auto;
+  border: 1px solid #d8aaa0;
+  border-radius: 2rem;
+  background: #fff1ed;
+  padding: 0.35rem 0.55rem;
+  color: #7e3025;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+.gmail-connected dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1rem 0 0;
+}
+.gmail-connected dl > div {
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: #fbf7f2;
+  padding: 0.72rem;
+}
+.gmail-connected dt {
+  color: var(--muted);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.gmail-connected dd {
+  overflow: hidden;
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+}
+.gmail-first-sync {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  margin-top: 0.8rem;
+  border: 1px solid #d4b08d;
+  border-radius: 0.5rem;
+  background: #fff6eb;
+  padding: 0.75rem;
+  color: #875321;
+}
+.gmail-first-sync svg {
+  flex: 0 0 auto;
+}
+.gmail-first-sync p {
+  margin: 0;
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+.gmail-actions {
+  display: flex;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+.gmail-actions .button,
+.gmail-ready-to-connect .button,
+.gmail-setup > .button {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  text-decoration: none;
+}
+.gmail-disconnect {
+  margin-left: auto;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.gmail-disconnect.armed {
+  border-color: #d8aaa0;
+  background: #fff1ed;
+  color: var(--danger);
+}
+.gmail-guide-heading {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.gmail-guide-heading a {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.3rem;
+  align-items: center;
+  color: var(--accent-dark);
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+.gmail-guide {
+  display: grid;
+  gap: 0.45rem;
+  margin: 1rem 0 0.8rem;
+  padding-left: 1.25rem;
+  color: var(--ink-soft);
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+.gmail-guide li::marker {
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+.gmail-redirect-uri {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  border: 1px solid var(--border-dark);
+  border-radius: 0.45rem;
+  background: #fffdfa;
+  padding: 0.55rem 0.6rem;
+}
+.gmail-redirect-uri code {
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+  color: var(--ink-soft);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: all;
+}
+.gmail-redirect-uri button {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--accent-dark);
+  font: inherit;
+  font-size: 0.6rem;
+  font-weight: 800;
+}
+.gmail-env-help {
+  margin: 0.65rem 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1.55;
+}
+.gmail-env-help code {
+  border-radius: 0.25rem;
+  background: #eee5dd;
+  padding: 0.08rem 0.24rem;
+  color: var(--ink-soft);
+  font-size: 0.92em;
+}
+.gmail-ready-to-connect {
+  display: flex;
+  min-height: 7rem;
+  gap: 0.85rem;
+  align-items: flex-start;
+  border: 1px dashed var(--border-dark);
+  border-radius: 0.55rem;
+  padding: 1rem;
+  color: var(--accent-dark);
+}
+.gmail-ready-to-connect .button {
+  margin-top: 0.8rem;
 }
 .telegram-connected > div:first-child strong,
 .telegram-viewer-empty strong {
@@ -3065,7 +3887,9 @@ input:focus-visible {
 .telegram-viewer-empty p {
   margin-bottom: 0;
 }
-.telegram-body .channel-message button {
+.telegram-body .channel-message button,
+.gmail-body .channel-message button,
+.whatsapp-body .channel-message button {
   margin-left: auto;
   border: 0;
   background: transparent;
@@ -4163,8 +4987,16 @@ input:focus-visible {
   .telegram-body {
     padding: 1rem;
   }
+  .gmail-body {
+    padding: 1rem;
+  }
+  .whatsapp-body {
+    padding: 1rem;
+  }
   .telegram-setup,
-  .telegram-connected dl {
+  .telegram-connected dl,
+  .gmail-connected dl,
+  .whatsapp-connected dl {
     grid-template-columns: 1fr;
   }
   .telegram-setup form {
@@ -4179,6 +5011,56 @@ input:focus-visible {
   }
   .telegram-actions .button,
   .telegram-disconnect {
+    width: 100%;
+    margin-left: 0;
+  }
+  .gmail-summary,
+  .gmail-guide-heading,
+  .gmail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .gmail-actions .button,
+  .gmail-disconnect,
+  .gmail-setup > .button {
+    width: 100%;
+    margin-left: 0;
+  }
+  .whatsapp-setup {
+    grid-template-columns: 1fr;
+  }
+  .whatsapp-setup form {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+    padding-top: 1rem;
+    padding-left: 0;
+  }
+  .whatsapp-summary,
+  .whatsapp-guide-heading,
+  .whatsapp-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .whatsapp-actions .button,
+  .whatsapp-disconnect,
+  .whatsapp-webhook-setup > .button {
+    width: 100%;
+    margin-left: 0;
+  }
+  .meta-channel-grid {
+    grid-template-columns: 1fr;
+  }
+  .meta-actions,
+  .meta-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .meta-actions a,
+  .meta-actions button,
+  .meta-actions button:last-child,
+  .meta-form-actions .button,
+  .meta-webhook-setup > .button {
+    justify-content: center;
     width: 100%;
     margin-left: 0;
   }

@@ -3,6 +3,7 @@
 import {
   BookOpen,
   ChartNoAxesColumnIncreasing,
+  CreditCard,
   Globe2,
   Inbox,
   LogOut,
@@ -16,6 +17,7 @@ import { useEffect, useState } from 'react';
 
 import { Brand } from '../brand';
 import { AnalyticsPanel } from './analytics-panel';
+import { BillingPanel } from './billing-panel';
 import { ChannelsPanel } from './channels-panel';
 import { InboxPanel } from './inbox-panel';
 import { KnowledgeLibrary } from './knowledge-library';
@@ -35,6 +37,7 @@ const navItems = [
   { icon: Globe2, label: 'Channels' },
   { icon: UsersRound, label: 'Team' },
   { icon: ChartNoAxesColumnIncreasing, label: 'Analytics' },
+  { icon: CreditCard, label: 'Billing' },
 ];
 
 export function Dashboard() {
@@ -47,6 +50,12 @@ export function Dashboard() {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
+    const requestedSection = new URLSearchParams(window.location.search).get(
+      'section',
+    );
+    if (navItems.some(({ label }) => label === requestedSection)) {
+      setActiveSection(requestedSection ?? 'Inbox');
+    }
     void (async () => {
       try {
         const session = await readSupplineSession();
@@ -221,7 +230,9 @@ export function Dashboard() {
                       ? `Control which websites can send support messages to ${workspace.name}.`
                       : activeSection === 'Team'
                         ? `Manage who can access ${workspace.name} and what each role can do.`
-                        : `Review ticket operations and human-controlled AI draft outcomes for ${workspace.name}.`}
+                        : activeSection === 'Billing'
+                          ? `Review the plan and Stripe subscription for ${workspace.name}.`
+                          : `Review ticket operations and human-controlled AI draft outcomes for ${workspace.name}.`}
               </p>
             </div>
           </div>
@@ -242,6 +253,7 @@ export function Dashboard() {
               canManage={
                 workspace.role === 'owner' || workspace.role === 'admin'
               }
+              canOperate={workspace.role !== 'viewer'}
               workspaceId={workspace.id}
             />
           ) : activeSection === 'Team' ? (
@@ -255,6 +267,11 @@ export function Dashboard() {
               canManage={
                 workspace.role === 'owner' || workspace.role === 'admin'
               }
+              workspaceId={workspace.id}
+            />
+          ) : activeSection === 'Billing' ? (
+            <BillingPanel
+              isOwner={workspace.role === 'owner'}
               workspaceId={workspace.id}
             />
           ) : null}

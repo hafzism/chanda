@@ -19,12 +19,17 @@ import {
   type WebChannel,
 } from '../../lib/channels';
 import { TelegramChannelCard } from './telegram-channel-card';
+import { GmailChannelCard } from './gmail-channel-card';
+import { WhatsAppChannelCard } from './whatsapp-channel-card';
+import { MetaMessagingChannelCard } from './meta-messaging-channel-card';
 
 export function ChannelsPanel({
   canManage,
+  canOperate,
   workspaceId,
 }: {
   canManage: boolean;
+  canOperate: boolean;
   workspaceId: string;
 }) {
   const [channel, setChannel] = useState<WebChannel>();
@@ -347,6 +352,24 @@ export function ChannelsPanel({
         </div>
       </article>
       <TelegramChannelCard canManage={canManage} workspaceId={workspaceId} />
+      <GmailChannelCard
+        canManage={canManage}
+        canOperate={canOperate}
+        workspaceId={workspaceId}
+      />
+      <WhatsAppChannelCard canManage={canManage} workspaceId={workspaceId} />
+      <div className="meta-channel-grid">
+        <MetaMessagingChannelCard
+          canManage={canManage}
+          kind="instagram"
+          workspaceId={workspaceId}
+        />
+        <MetaMessagingChannelCard
+          canManage={canManage}
+          kind="facebook"
+          workspaceId={workspaceId}
+        />
+      </div>
     </section>
   );
 }
