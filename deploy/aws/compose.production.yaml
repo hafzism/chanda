@@ -1,0 +1,213 @@
+name: suppline-ai-production
+
+x-app: &app
+  image: ${SUPPLINE_IMAGE:-suppline-ai:production}
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+    args:
+      API_INTERNAL_URL: http://api:4000
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY}
+      NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+      NEXT_PUBLIC_WIDGET_API_ORIGIN: https://${APP_DOMAIN}
+  init: true
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+
+x-api-environment: &api-environment
+  API_PORT: 4000
+  CHANNEL_CREDENTIALS_ENCRYPTION_KEY: ${CHANNEL_CREDENTIALS_ENCRYPTION_KEY}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-suppline}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-suppline}
+  FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+  FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+  FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+  GEMINI_API_KEY: ${GEMINI_API_KEY}
+  GMAIL_OAUTH_REDIRECT_URI: https://${APP_DOMAIN}/v1/public/gmail/oauth/callback
+  GOOGLE_GMAIL_CLIENT_ID: ${GOOGLE_GMAIL_CLIENT_ID}
+  GOOGLE_GMAIL_CLIENT_SECRET: ${GOOGLE_GMAIL_CLIENT_SECRET}
+  META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-v24.0}
+  META_MESSAGING_WEBHOOK_BASE_URL: https://${APP_DOMAIN}
+  NODE_ENV: production
+  REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+  S3_BUCKET: ${S3_BUCKET}
+  S3_REGION: ${AWS_REGION}
+  STRIPE_PRO_PRICE_ID: ${STRIPE_PRO_PRICE_ID}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+  TELEGRAM_WEBHOOK_BASE_URL: https://${APP_DOMAIN}
+  WEB_APP_ORIGIN: https://${APP_DOMAIN}
+  WEB_APP_URL: https://${APP_DOMAIN}
+  WHATSAPP_WEBHOOK_BASE_URL: https://${APP_DOMAIN}
+
+services:
+  caddy:
+    image: caddy:2.10.2-alpine@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_config:/config
+      - caddy_data:/data
+    networks:
+      - edge
+
+  web:
+    <<: *app
+    command: node_modules/.bin/next start --port 3000
+    environment:
+      API_INTERNAL_URL: http://api:4000
+      NODE_ENV: production
+      WEB_PORT: 3000
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - edge
+    working_dir: /app/apps/web
+
+  api:
+    <<: *app
+    command: node apps/api/dist/main.js
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment: *api-environment
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/v1/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+      - edge
+
+  worker:
+    <<: *app
+    command: node apps/worker/dist/main.js
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-suppline}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-suppline}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      NODE_ENV: production
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      S3_BUCKET: ${S3_BUCKET}
+      S3_REGION: ${AWS_REGION}
+    healthcheck:
+      test: ['CMD', 'node', '-e', 'process.kill(1, 0)']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - backend
+
+  migrate:
+    <<: *app
+    command: node_modules/.bin/tsx src/migrate.ts
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-suppline}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-suppline}
+      NODE_ENV: production
+    profiles: [tools]
+    restart: 'no'
+    working_dir: /app/packages/database
+    networks:
+      - backend
+
+  postgres:
+    image: pgvector/pgvector:0.8.1-pg17@sha256:3e8b3adfd27b5707128f60956f62a793c3c9326ea8cfaf0eab7adccb5d700b21
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-suppline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-suppline}
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    shm_size: 128mb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+  redis:
+    image: redis:8-alpine@sha256:9d317178eceac8454a2284a9e6df2466b93c745529947f0cd42a0fa9609d7005
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --requirepass
+      - ${REDIS_PASSWORD}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'REDISCLI_AUTH="$${REDIS_PASSWORD}" redis-cli ping | grep PONG',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+
+networks:
+  backend:
+    internal: true
+  edge:
+
+volumes:
+  caddy_config:
+  caddy_data:
+  postgres_data:
+  redis_data:

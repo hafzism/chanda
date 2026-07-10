@@ -7,6 +7,7 @@
 .env
 .env.*
 !.env.example
+!/deploy/aws/.env.production.example
 *.pem
 *.key
 *-firebase-adminsdk-*.json
