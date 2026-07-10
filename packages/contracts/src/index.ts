@@ -3,6 +3,13 @@ export interface HealthResponse {
   status: 'ok';
 }
 
+export interface ReadinessResponse extends HealthResponse {
+  checks: {
+    database: 'ok';
+    redis: 'ok';
+  };
+}
+
 export const KNOWLEDGE_INDEX_QUEUE = 'knowledge-index';
 export const KNOWLEDGE_VERSION_INDEX_REQUESTED =
   'knowledge.version.index.requested';

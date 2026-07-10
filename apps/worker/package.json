@@ -19,6 +19,7 @@
     "@suppline/contracts": "workspace:*",
     "@suppline/database": "workspace:*",
     "@suppline/knowledge": "workspace:*",
+    "@suppline/observability": "workspace:*",
     "bullmq": "5.80.2",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2"

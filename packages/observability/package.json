@@ -1,0 +1,18 @@
+{
+  "name": "@suppline/observability",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint src test",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.12",
+    "typescript": "5.9.3",
+    "vitest": "4.1.1"
+  }
+}

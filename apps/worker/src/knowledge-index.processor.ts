@@ -45,9 +45,12 @@ export class KnowledgeIndexProcessor
       void this.repository
         .fail(job.data, error.message)
         .catch((failure: unknown) =>
-          this.logger.error(
-            `Unable to record final failure for ${job.id}: ${String(failure)}`,
-          ),
+          this.logger.error({
+            error: failure,
+            event: 'knowledge_index_failure_record_failed',
+            jobId: job.id,
+            workspaceId: job.data.workspaceId,
+          }),
         );
     });
   }
@@ -81,5 +84,15 @@ export class KnowledgeIndexProcessor
       );
     }
     await this.repository.complete(job.data, chunks, vectors);
+    this.logger.log({
+      chunkCount: chunks.length,
+      conversationId: null,
+      documentId: job.data.documentId,
+      event: 'knowledge_index_completed',
+      jobId: job.id,
+      ticketId: null,
+      versionId: job.data.versionId,
+      workspaceId: job.data.workspaceId,
+    });
   }
 }

@@ -99,6 +99,12 @@ export class OutboxPublisher implements OnModuleInit, OnApplicationShutdown {
         set published_at = now(), last_error = null
         where id = ${event.id} and published_at is null
       `);
+      this.logger.log({
+        event: 'outbox_event_published',
+        jobId: event.id,
+        topic: event.topic,
+        workspaceId: event.payload.workspaceId,
+      });
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : 'Publish failed.';
@@ -107,9 +113,12 @@ export class OutboxPublisher implements OnModuleInit, OnApplicationShutdown {
         set last_error = ${message}, available_at = now() + interval '30 seconds'
         where id = ${event.id} and published_at is null
       `);
-      this.logger.error(
-        `Outbox event ${event.id} was not published: ${message}`,
-      );
+      this.logger.error({
+        error: message,
+        event: 'outbox_event_publish_failed',
+        jobId: event.id,
+        topic: event.topic,
+      });
     }
   }
 }

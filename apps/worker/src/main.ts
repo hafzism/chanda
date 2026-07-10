@@ -1,14 +1,17 @@
 import 'reflect-metadata';
 
-import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { StructuredLogger } from '@suppline/observability';
 
 import { WorkerModule } from './worker.module';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.createApplicationContext(WorkerModule);
+  const logger = new StructuredLogger({ service: 'worker' });
+  const app = await NestFactory.createApplicationContext(WorkerModule, {
+    logger,
+  });
   app.enableShutdownHooks();
-  Logger.log('Worker context initialized', 'Bootstrap');
+  logger.log('Worker context initialized', 'Bootstrap');
 }
 
 void bootstrap();

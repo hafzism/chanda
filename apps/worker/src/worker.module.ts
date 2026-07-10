@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { DatabaseService } from './database.service';
 import { GeminiEmbeddingService } from './embedding.service';
+import { validateWorkerEnvironment } from './environment';
 import {
   EMBEDDING_PROVIDER_TOKEN,
   KnowledgeIndexProcessor,
@@ -21,6 +22,7 @@ import { SourceStorageService } from './source-storage.service';
         '.env.local',
       ],
       isGlobal: true,
+      validate: validateWorkerEnvironment,
     }),
   ],
   providers: [

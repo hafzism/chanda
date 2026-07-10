@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "declaration": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "noEmit": false,
+    "outDir": "dist",
+    "sourceMap": true,
+    "target": "es2023"
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

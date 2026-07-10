@@ -12,7 +12,9 @@ export interface DatabaseClient {
 export function createDatabaseClient(connectionString: string): DatabaseClient {
   const pool = new Pool({
     allowExitOnIdle: true,
+    connectionTimeoutMillis: 5_000,
     connectionString,
+    idleTimeoutMillis: 30_000,
     max: 10,
   });
   const db = drizzle(pool, { schema });

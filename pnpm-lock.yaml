@@ -69,6 +69,9 @@ importers:
       '@suppline/knowledge':
         specifier: workspace:*
         version: link:../../packages/knowledge
+      '@suppline/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       class-transformer:
         specifier: 0.5.1
         version: 0.5.1
@@ -203,6 +206,9 @@ importers:
       '@suppline/knowledge':
         specifier: workspace:*
         version: link:../../packages/knowledge
+      '@suppline/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       bullmq:
         specifier: 5.80.2
         version: 5.80.2
@@ -270,6 +276,18 @@ importers:
         version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@24.10.12)(vite@8.1.4(@types/node@24.10.12)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1))
 
   packages/knowledge:
+    devDependencies:
+      '@types/node':
+        specifier: 24.10.12
+        version: 24.10.12
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: 4.1.1
+        version: 4.1.1(@opentelemetry/api@1.9.1)(@types/node@24.10.12)(vite@8.1.4(@types/node@24.10.12)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.1))
+
+  packages/observability:
     devDependencies:
       '@types/node':
         specifier: 24.10.12

@@ -1,5 +1,9 @@
 import { Injectable, type OnApplicationShutdown } from '@nestjs/common';
-import { createDatabaseClient, type DatabaseClient } from '@suppline/database';
+import {
+  createDatabaseClient,
+  sql,
+  type DatabaseClient,
+} from '@suppline/database';
 
 const LOCAL_DATABASE_URL =
   'postgresql://suppline:suppline@localhost:55432/suppline';
@@ -24,6 +28,10 @@ export class DatabaseService implements OnApplicationShutdown {
     createDatabaseClient(readDatabaseUrl());
 
   readonly db: DatabaseClient['db'] = this.client.db;
+
+  async ping(): Promise<void> {
+    await this.db.execute(sql`select 1`);
+  }
 
   async onApplicationShutdown(): Promise<void> {
     await this.client.close();
