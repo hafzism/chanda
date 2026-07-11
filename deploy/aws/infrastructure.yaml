@@ -1,0 +1,393 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cost-conscious single-host production infrastructure for Suppline AI.
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Email that receives budget and instance alarms. Confirm the SNS subscription after deployment.
+  BudgetAmountUsd:
+    Type: Number
+    Default: 15
+    MinValue: 1
+    Description: Monthly cost budget in USD.
+  GitHubOidcProviderArn:
+    Type: String
+    AllowedPattern: '^arn:aws:iam::[0-9]{12}:oidc-provider/token\.actions\.githubusercontent\.com$'
+    Description: ARN of the account-level GitHub Actions OIDC provider.
+  GitHubOwner:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9_.-]+$'
+  GitHubRepository:
+    Type: String
+    AllowedPattern: '^[A-Za-z0-9_.-]+$'
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.small
+      - t3.medium
+    Description: t3.small is the minimum supported size for the complete stack.
+  LatestUbuntuAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
+Resources:
+  KnowledgeBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: RetainDeletedKnowledgeVersions
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+            Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: RetainDailyBackups
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+            ExpirationInDays: 35
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 1
+            Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName: /suppline/production
+      RetentionInDays: 7
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Public HTTPS ingress for Suppline AI; administration uses SSM.
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          Description: Required for provider APIs, package/image pulls, S3, SSM, and certificate issuance.
+          IpProtocol: '-1'
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          Description: Caddy HTTP challenge and HTTPS redirect.
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          Description: Caddy HTTPS ingress.
+          FromPort: 443
+          IpProtocol: tcp
+          ToPort: 443
+        - CidrIp: 0.0.0.0/0
+          Description: HTTP/3 over QUIC.
+          FromPort: 443
+          IpProtocol: udp
+          ToPort: 443
+      VpcId: !Ref VpcId
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Policies:
+        - PolicyName: SupplineObjectAndLogAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ListApplicationBuckets
+                Effect: Allow
+                Action: s3:ListBucket
+                Resource:
+                  - !GetAtt KnowledgeBucket.Arn
+                  - !GetAtt BackupBucket.Arn
+              - Sid: ManageKnowledgeObjects
+                Effect: Allow
+                Action:
+                  - s3:DeleteObject
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub '${KnowledgeBucket.Arn}/*'
+              - Sid: ManageBackupObjects
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: !Sub '${BackupBucket.Arn}/*'
+              - Sid: WriteApplicationLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:DescribeLogStreams
+                  - logs:PutLogEvents
+                Resource: !Sub '${ApplicationLogGroup.Arn}:*'
+              - Sid: PublishBackupHealth
+                Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: '*'
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: Suppline/Backups
+              - Sid: SignalBootstrapResult
+                Effect: Allow
+                Action: cloudformation:SignalResource
+                Resource: !Sub 'arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AWS::StackName}/*'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  ApplicationInstance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT15M
+    Properties:
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            DeleteOnTermination: false
+            Encrypted: true
+            VolumeSize: 20
+            VolumeType: gp3
+      CreditSpecification:
+        CPUCredits: standard
+      DisableApiTermination: true
+      IamInstanceProfile: !Ref InstanceProfile
+      ImageId: !Ref LatestUbuntuAmiId
+      InstanceType: !Ref InstanceType
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpPutResponseHopLimit: 2
+        HttpTokens: required
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeleteOnTermination: true
+          DeviceIndex: '0'
+          GroupSet:
+            - !Ref InstanceSecurityGroup
+          SubnetId: !Ref SubnetId
+      Tags:
+        - Key: Name
+          Value: suppline-production
+        - Key: Product
+          Value: SupplineAI
+      UserData:
+        Fn::Base64: !Sub |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y ca-certificates curl git jq nano awscli
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          . /etc/os-release
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $VERSION_CODENAME stable" > /etc/apt/sources.list.d/docker.list
+          apt-get update
+          apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          systemctl enable --now docker
+          snap start amazon-ssm-agent || true
+          id suppline >/dev/null 2>&1 || useradd --create-home --shell /bin/bash suppline
+          usermod -aG docker suppline
+          install -d -m 0750 -o suppline -g suppline /opt/suppline-ai
+          if ! swapon --show | grep -q .; then
+            fallocate -l 2G /swapfile
+            chmod 600 /swapfile
+            mkswap /swapfile
+            swapon /swapfile
+            echo '/swapfile none swap sw 0 0' >> /etc/fstab
+          fi
+          cat >/etc/docker/daemon.json <<'JSON'
+          {
+            "log-driver": "json-file",
+            "log-opts": {"max-file": "3", "max-size": "10m"}
+          }
+          JSON
+          systemctl restart docker
+          aws cloudformation signal-resource --stack-name ${AWS::StackName} --logical-resource-id ApplicationInstance --unique-id "$(hostname)" --status SUCCESS --region ${AWS::Region}
+
+  ElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref ApplicationInstance
+      Tags:
+        - Key: Name
+          Value: suppline-production
+
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: suppline-production-alerts
+
+  AlertSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref AlertEmail
+      Protocol: email
+      TopicArn: !Ref AlertTopic
+
+  CpuAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref AlertTopic
+      AlarmDescription: Suppline EC2 CPU remained above 85 percent.
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref ApplicationInstance
+      EvaluationPeriods: 3
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 300
+      Statistic: Average
+      Threshold: 85
+      TreatMissingData: missing
+
+  StatusCheckAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref AlertTopic
+      AlarmDescription: Suppline EC2 failed an instance or system status check.
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: InstanceId
+          Value: !Ref ApplicationInstance
+      EvaluationPeriods: 2
+      MetricName: StatusCheckFailed
+      Namespace: AWS/EC2
+      Period: 60
+      Statistic: Maximum
+      Threshold: 1
+      TreatMissingData: missing
+
+  BackupAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref AlertTopic
+      AlarmDescription: Suppline did not report a successful PostgreSQL backup in the last day.
+      ComparisonOperator: LessThanThreshold
+      EvaluationPeriods: 1
+      MetricName: SuccessfulBackup
+      Namespace: Suppline/Backups
+      Period: 86400
+      Statistic: Maximum
+      Threshold: 1
+      TreatMissingData: breaching
+
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: !Ref BudgetAmountUsd
+          Unit: USD
+        BudgetName: suppline-production-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+      NotificationsWithSubscribers:
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: FORECASTED
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - Address: !Ref AlertEmail
+              SubscriptionType: EMAIL
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOwner}/${GitHubRepository}:environment:production'
+      MaxSessionDuration: 3600
+      Policies:
+        - PolicyName: DeployOnlyToSupplineInstance
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: SendShellCommand
+                Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-RunShellScript'
+                  - !Sub 'arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${ApplicationInstance}'
+              - Sid: ReadCommandResult
+                Effect: Allow
+                Action:
+                  - ssm:GetCommandInvocation
+                  - ssm:ListCommandInvocations
+                Resource: '*'
+
+Outputs:
+  BackupBucketName:
+    Value: !Ref BackupBucket
+  DeployRoleArn:
+    Value: !GetAtt GitHubDeployRole.Arn
+  ElasticIpAddress:
+    Value: !Ref ElasticIp
+  InstanceId:
+    Value: !Ref ApplicationInstance
+  KnowledgeBucketName:
+    Value: !Ref KnowledgeBucket
+  LogGroupName:
+    Value: !Ref ApplicationLogGroup
