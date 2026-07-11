@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [Verify]
+    types: [completed]
+
+concurrency:
+  cancel-in-progress: false
+  group: production
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  publish:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    permissions:
+      contents: read
+      packages: write
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image.outputs.immutable }}
+    steps:
+      - name: Validate public build configuration
+        env:
+          FIREBASE_API_KEY: ${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          FIREBASE_AUTH_DOMAIN: ${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+        run: |
+          test -n "$FIREBASE_API_KEY"
+          test -n "$FIREBASE_APP_ID"
+          test -n "$FIREBASE_AUTH_DOMAIN"
+          test -n "$FIREBASE_PROJECT_ID"
+
+      - name: Check out the verified revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Resolve immutable image name
+        id: image
+        env:
+          REVISION: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "name=$image" >> "$GITHUB_OUTPUT"
+          echo "immutable=$image:sha-$REVISION" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to GHCR
+        uses: docker/login-action@v3
+        with:
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+
+      - name: Build and publish the verified image
+        uses: docker/build-push-action@v6
+        with:
+          build-args: |
+            API_INTERNAL_URL=http://api:4000
+            NEXT_PUBLIC_FIREBASE_API_KEY=${{ vars.NEXT_PUBLIC_FIREBASE_API_KEY }}
+            NEXT_PUBLIC_FIREBASE_APP_ID=${{ vars.NEXT_PUBLIC_FIREBASE_APP_ID }}
+            NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ vars.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+            NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ vars.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+            NEXT_PUBLIC_WIDGET_API_ORIGIN=https://chanda.hafzism.in
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: .
+          labels: |
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          platforms: linux/amd64
+          provenance: true
+          push: true
+          tags: |
+            ${{ steps.image.outputs.immutable }}
+            ${{ steps.image.outputs.name }}:main
+
+  deploy:
+    environment: production
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    needs: publish
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate AWS deployment configuration
+        env:
+          INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
+          ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          test -n "$AWS_REGION"
+          test -n "$INSTANCE_ID"
+          test -n "$ROLE_ARN"
+
+      - name: Authenticate to AWS with GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: suppline-${{ github.run_id }}
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+
+      - name: Deploy through Systems Manager
+        env:
+          IMAGE: ${{ needs.publish.outputs.image }}
+          INSTANCE_ID: ${{ vars.AWS_INSTANCE_ID }}
+        run: |
+          command="sudo -u suppline ENV_FILE=/opt/suppline-ai/deploy/aws/.env.production /opt/suppline-ai/deploy/aws/deploy-release.sh '$IMAGE'"
+          parameters=$(jq -cn --arg command "$command" '{commands: [$command]}')
+          command_id=$(aws ssm send-command \
+            --document-name AWS-RunShellScript \
+            --instance-ids "$INSTANCE_ID" \
+            --parameters "$parameters" \
+            --query 'Command.CommandId' \
+            --output text)
+          aws ssm wait command-executed \
+            --command-id "$command_id" \
+            --instance-id "$INSTANCE_ID"
+          aws ssm get-command-invocation \
+            --command-id "$command_id" \
+            --instance-id "$INSTANCE_ID" \
+            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
