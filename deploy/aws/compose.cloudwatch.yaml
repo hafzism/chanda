@@ -1,0 +1,70 @@
+x-cloudwatch-logging: &cloudwatch-logging
+  driver: awslogs
+  options:
+    awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+    awslogs-region: ${AWS_REGION}
+    awslogs-create-group: 'false'
+
+services:
+  caddy:
+    logging:
+      <<: *cloudwatch-logging
+      options:
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-create-group: 'false'
+        awslogs-stream: caddy
+
+  web:
+    logging:
+      <<: *cloudwatch-logging
+      options:
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-create-group: 'false'
+        awslogs-stream: web
+
+  api:
+    logging:
+      <<: *cloudwatch-logging
+      options:
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-create-group: 'false'
+        awslogs-stream: api
+
+  worker:
+    logging:
+      <<: *cloudwatch-logging
+      options:
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-create-group: 'false'
+        awslogs-stream: worker
+
+  migrate:
+    logging:
+      <<: *cloudwatch-logging
+      options:
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-create-group: 'false'
+        awslogs-stream: migrate
+
+  postgres:
+    logging:
+      <<: *cloudwatch-logging
+      options:
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-create-group: 'false'
+        awslogs-stream: postgres
+
+  redis:
+    logging:
+      <<: *cloudwatch-logging
+      options:
+        awslogs-group: ${CLOUDWATCH_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-create-group: 'false'
+        awslogs-stream: redis

@@ -6,6 +6,7 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 PROJECT_DIR=$(cd -- "$SCRIPT_DIR/../.." && pwd)
 ENV_FILE=${1:-$SCRIPT_DIR/.env.production}
 COMPOSE_FILE=$SCRIPT_DIR/compose.production.yaml
+CLOUDWATCH_COMPOSE_FILE=$SCRIPT_DIR/compose.cloudwatch.yaml
 DEPLOY_MODE=${DEPLOY_MODE:-pull}
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -19,7 +20,12 @@ if [[ "$permissions" != '600' && "$permissions" != '400' ]]; then
   exit 1
 fi
 
-compose=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+compose=(
+  docker compose
+  --env-file "$ENV_FILE"
+  -f "$COMPOSE_FILE"
+  -f "$CLOUDWATCH_COMPOSE_FILE"
+)
 "${compose[@]}" config --quiet
 
 case "$DEPLOY_MODE" in
