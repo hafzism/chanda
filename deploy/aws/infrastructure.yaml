@@ -92,7 +92,6 @@ Resources:
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
     Properties:
-      LogGroupName: /suppline/production
       RetentionInDays: 7
 
   InstanceSecurityGroup:
@@ -221,10 +220,25 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
           #!/usr/bin/env bash
-          set -euo pipefail
+          set -Eeuo pipefail
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y ca-certificates curl git jq nano awscli
+          apt-get install -y ca-certificates curl git jq nano unzip
+
+          AWS_CLI_VERSION=2.35.15
+          AWS_CLI_SHA256=50692e3e2a606007d7789b5a307dca41452a965dea1f3d3687972da6e5adc86c
+          curl -fsSL --retry 3 "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-$AWS_CLI_VERSION.zip" -o /tmp/awscliv2.zip
+          echo "$AWS_CLI_SHA256  /tmp/awscliv2.zip" | sha256sum --check --strict
+          unzip -q /tmp/awscliv2.zip -d /tmp/awscli-installer
+          /tmp/awscli-installer/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli
+          rm -rf /tmp/awscliv2.zip /tmp/awscli-installer
+          /usr/local/bin/aws --version
+
+          signal_failure() {
+            /usr/local/bin/aws cloudformation signal-resource --stack-name ${AWS::StackName} --logical-resource-id ApplicationInstance --unique-id "$(hostname)" --status FAILURE --region ${AWS::Region} || true
+          }
+          trap signal_failure ERR
+
           install -m 0755 -d /etc/apt/keyrings
           curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
           chmod a+r /etc/apt/keyrings/docker.asc
@@ -251,7 +265,8 @@ Resources:
           }
           JSON
           systemctl restart docker
-          aws cloudformation signal-resource --stack-name ${AWS::StackName} --logical-resource-id ApplicationInstance --unique-id "$(hostname)" --status SUCCESS --region ${AWS::Region}
+          trap - ERR
+          /usr/local/bin/aws cloudformation signal-resource --stack-name ${AWS::StackName} --logical-resource-id ApplicationInstance --unique-id "$(hostname)" --status SUCCESS --region ${AWS::Region}
 
   ElasticIp:
     Type: AWS::EC2::EIP
@@ -265,7 +280,11 @@ Resources:
   AlertTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: suppline-production-alerts
+      Tags:
+        - Key: Name
+          Value: suppline-production-alerts
+        - Key: Product
+          Value: SupplineAI
 
   AlertSubscription:
     Type: AWS::SNS::Subscription
@@ -332,7 +351,6 @@ Resources:
         BudgetLimit:
           Amount: !Ref BudgetAmountUsd
           Unit: USD
-        BudgetName: suppline-production-monthly
         BudgetType: COST
         TimeUnit: MONTHLY
       NotificationsWithSubscribers:
@@ -344,6 +362,11 @@ Resources:
           Subscribers:
             - Address: !Ref AlertEmail
               SubscriptionType: EMAIL
+      ResourceTags:
+        - Key: Name
+          Value: suppline-production-monthly
+        - Key: Product
+          Value: SupplineAI
 
   GitHubDeployRole:
     Type: AWS::IAM::Role
