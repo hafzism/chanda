@@ -1,0 +1,1 @@
+ALTER TABLE "knowledge_document_versions" ADD COLUMN "extracted_object_key" text;

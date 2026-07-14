@@ -1,0 +1,2 @@
+DROP INDEX "outbox_events_topic_aggregate_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "outbox_events_topic_aggregate_unique" ON "outbox_events" USING btree ("topic","aggregate_id") WHERE "outbox_events"."published_at" is null;
