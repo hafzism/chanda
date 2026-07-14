@@ -38,7 +38,9 @@ case "$DEPLOY_MODE" in
       echo "Set SUPPLINE_IMAGE to the published registry image before a pull deployment." >&2
       exit 1
     fi
-    "${compose[@]}" pull
+    # SSM retains only a bounded amount of command output. Suppress per-layer
+    # progress so a registry, network, or disk error remains visible.
+    "${compose[@]}" pull --quiet
     ;;
   *)
     echo "DEPLOY_MODE must be 'pull' or 'build'." >&2

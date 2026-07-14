@@ -125,10 +125,25 @@ jobs:
             --parameters "$parameters" \
             --query 'Command.CommandId' \
             --output text)
-          aws ssm wait command-executed \
+          waiter_failed=false
+          if ! aws ssm wait command-executed \
             --command-id "$command_id" \
-            --instance-id "$INSTANCE_ID"
-          aws ssm get-command-invocation \
+            --instance-id "$INSTANCE_ID"; then
+            waiter_failed=true
+          fi
+
+          invocation=$(aws ssm get-command-invocation \
             --command-id "$command_id" \
-            --instance-id "$INSTANCE_ID" \
-            --query '{Status:Status,Output:StandardOutputContent,Error:StandardErrorContent}'
+            --instance-id "$INSTANCE_ID")
+          jq -r '
+            "SSM command: \(.CommandId)\n" +
+            "Status: \(.Status) (response code \(.ResponseCode))\n" +
+            "--- stdout ---\n\(.StandardOutputContent)\n" +
+            "--- stderr ---\n\(.StandardErrorContent)"
+          ' <<<"$invocation"
+
+          status=$(jq -r '.Status' <<<"$invocation")
+          response_code=$(jq -r '.ResponseCode' <<<"$invocation")
+          if [[ "$waiter_failed" == true || "$status" != 'Success' || "$response_code" != '0' ]]; then
+            exit 1
+          fi
