@@ -11,33 +11,35 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.1085.0",
-    "@google/genai": "2.11.0",
-    "@nestjs/common": "11.1.28",
+    "@aws-sdk/client-s3": "3.1112.0",
+    "@nestjs/common": "11.2.1",
     "@nestjs/config": "4.0.4",
-    "@nestjs/core": "11.1.28",
-    "@nestjs/platform-express": "11.1.28",
+    "@nestjs/core": "11.2.1",
+    "@nestjs/platform-express": "11.2.1",
+    "@nestjs/throttler": "6.5.0",
+    "@suppline/ai": "workspace:*",
     "@suppline/contracts": "workspace:*",
     "@suppline/database": "workspace:*",
     "@suppline/knowledge": "workspace:*",
     "@suppline/observability": "workspace:*",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.3",
-    "firebase-admin": "14.1.0",
+    "firebase-admin": "14.2.0",
+    "helmet": "8.3.0",
     "ioredis": "5.11.1",
-    "pdf-parse": "2.2.2",
+    "pdf-parse": "2.4.5",
     "reflect-metadata": "0.2.2",
     "rxjs": "7.8.2",
-    "stripe": "22.3.1"
+    "stripe": "22.5.0"
   },
   "devDependencies": {
-    "@nestjs/cli": "11.0.16",
-    "@nestjs/testing": "11.1.28",
+    "@nestjs/cli": "11.0.24",
+    "@nestjs/testing": "11.2.1",
     "@types/express": "5.0.6",
     "@types/node": "24.10.12",
-    "@types/supertest": "7.2.0",
+    "@types/supertest": "7.2.1",
     "supertest": "7.2.2",
     "typescript": "5.9.3",
-    "vitest": "4.1.1"
+    "vitest": "4.1.10"
   }
 }

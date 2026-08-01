@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "pnpm build:widget && next build",
-    "build:widget": "esbuild ../widget/src/index.ts --bundle --format=iife --global-name=SupplineWidget --minify --outfile=public/widget.js",
+    "build:widget": "esbuild ../widget/src/index.ts --bundle --format=iife --global-name=ChandaWidget --minify --outfile=public/widget.js",
     "dev": "pnpm build:widget && next dev --port ${WEB_PORT:-3000}",
     "lint": "eslint .",
     "start": "next start --port ${WEB_PORT:-3000}",
@@ -13,20 +13,20 @@
   },
   "dependencies": {
     "@suppline/widget": "workspace:*",
-    "firebase": "12.16.0",
-    "lucide-react": "1.24.0",
-    "next": "16.2.10",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "firebase": "12.17.1",
+    "lucide-react": "1.32.0",
+    "next": "16.3.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "4.3.2",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "24.10.12",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "esbuild": "0.28.1",
-    "tailwindcss": "4.3.2",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "esbuild": "0.28.2",
+    "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
-    "vitest": "4.1.1"
+    "vitest": "4.1.10"
   }
 }
