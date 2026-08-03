@@ -110,6 +110,8 @@ export const aiDraftStatus = pgEnum('ai_draft_status', [
   'superseded',
 ]);
 
+export const aiProvider = pgEnum('ai_provider', ['openai', 'google-gemini']);
+
 export const billingSubscriptionStatus = pgEnum('billing_subscription_status', [
   'incomplete',
   'incomplete_expired',
@@ -190,6 +192,48 @@ export const workspaceMembers = pgTable(
       .on(table.workspaceId)
       .where(sql`${table.role} = 'owner'`),
     index('workspace_members_user_idx').on(table.userId),
+  ],
+);
+
+export const workspaceAiConfigurations = pgTable(
+  'workspace_ai_configurations',
+  {
+    workspaceId: uuid('workspace_id')
+      .primaryKey()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
+    provider: aiProvider('provider').notNull(),
+    encryptedApiKey: text('encrypted_api_key').notNull(),
+    apiKeyFingerprint: char('api_key_fingerprint', { length: 64 }).notNull(),
+    encryptionKeyVersion: integer('encryption_key_version')
+      .default(1)
+      .notNull(),
+    generationModel: text('generation_model').notNull(),
+    embeddingModel: text('embedding_model').notNull(),
+    embeddingDimensions: integer('embedding_dimensions').notNull(),
+    embeddingRevision: integer('embedding_revision').default(1).notNull(),
+    configuredByUserId: uuid('configured_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    validatedAt: timestamp('validated_at', {
+      mode: 'date',
+      withTimezone: true,
+    }).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    index('workspace_ai_configurations_provider_idx').on(table.provider),
+    check(
+      'workspace_ai_configurations_dimensions_check',
+      sql`${table.embeddingDimensions} = 1536`,
+    ),
+    check(
+      'workspace_ai_configurations_revision_check',
+      sql`${table.embeddingRevision} > 0`,
+    ),
+    check(
+      'workspace_ai_configurations_key_version_check',
+      sql`${table.encryptionKeyVersion} > 0`,
+    ),
   ],
 );
 
@@ -507,7 +551,7 @@ export const channelConnectionSecrets = pgTable(
       .references(() => channelConnections.id, { onDelete: 'cascade' }),
     encryptedCredentials: text('encrypted_credentials').notNull(),
     encryptionKeyVersion: integer('encryption_key_version')
-      .default(1)
+      .default(2)
       .notNull(),
     webhookSecretHash: char('webhook_secret_hash', { length: 64 }),
     ...timestamps,

@@ -326,8 +326,11 @@ describe('database migrations', () => {
   });
 
   it('stores channel credentials separately from public connection metadata', async () => {
-    const columns = await client.db.execute<{ column_name: string }>(sql`
-      select column_name
+    const columns = await client.db.execute<{
+      column_default: string | null;
+      column_name: string;
+    }>(sql`
+      select column_default, column_name
       from information_schema.columns
       where table_schema = 'public'
         and table_name = 'channel_connection_secrets'
@@ -352,8 +355,41 @@ describe('database migrations', () => {
     expect(columns.rows.map(({ column_name }) => column_name)).toContain(
       'webhook_secret_hash',
     );
+    expect(
+      columns.rows.find(
+        ({ column_name }) => column_name === 'encryption_key_version',
+      )?.column_default,
+    ).toBe('2');
     expect(settings.rows).toHaveLength(1);
     expect(indexes.rows).toHaveLength(1);
+  });
+
+  it('stores one encrypted AI provider configuration per workspace', async () => {
+    const columns = await client.db.execute<{ column_name: string }>(sql`
+      select column_name
+      from information_schema.columns
+      where table_schema = 'public'
+        and table_name = 'workspace_ai_configurations'
+      order by column_name
+    `);
+    const providers = await client.db.execute<{ value: string }>(sql`
+      select value
+      from unnest(enum_range(null::ai_provider)) as value
+      order by value
+    `);
+
+    expect(columns.rows.map(({ column_name }) => column_name)).toEqual(
+      expect.arrayContaining([
+        'api_key_fingerprint',
+        'embedding_revision',
+        'encrypted_api_key',
+        'workspace_id',
+      ]),
+    );
+    expect(providers.rows.map(({ value }) => value)).toEqual([
+      'openai',
+      'google-gemini',
+    ]);
   });
 
   it('stores expiring one-time OAuth state without requiring webhook credentials', async () => {

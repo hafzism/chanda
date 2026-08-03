@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  aiProvider,
   billingSubscriptionStatus,
+  channelConnectionSecrets,
   conversationStatus,
   channelConnections,
   knowledgeSourceKind,
@@ -13,7 +15,23 @@ import {
   outboxEvents,
   workspaceRole,
   workspaceBillingAccounts,
+  workspaceAiConfigurations,
 } from '../src/schema';
+
+describe('workspace AI provider configuration', () => {
+  it('supports only the production provider adapters and write-only storage', () => {
+    expect(aiProvider.enumValues).toEqual(['openai', 'google-gemini']);
+    expect(workspaceAiConfigurations.encryptedApiKey).toBeDefined();
+    expect(workspaceAiConfigurations.apiKeyFingerprint).toBeDefined();
+    expect(workspaceAiConfigurations.embeddingRevision).toBeDefined();
+  });
+});
+
+describe('encrypted channel credentials', () => {
+  it('writes newly stored credentials using the context-bound cipher version', () => {
+    expect(channelConnectionSecrets.encryptionKeyVersion.default).toBe(2);
+  });
+});
 
 describe('workspace roles', () => {
   it('exposes only the supported authorization roles', () => {

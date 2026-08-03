@@ -120,6 +120,20 @@
       "when": 1783983109349,
       "tag": "0016_stripe_billing",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787142447119,
+      "tag": "0017_workspace_ai_configuration",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787148884984,
+      "tag": "0018_channel_credential_context",
+      "breakpoints": true
     }
   ]
 }
