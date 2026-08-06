@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { StructuredLogger } from '@suppline/observability';
 import { join } from 'node:path';
 
+import { AiConfigurationModule } from './ai/ai-configuration.module';
 import { AuthModule } from './auth/auth.module';
 import { BillingModule } from './billing/billing.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -28,7 +30,15 @@ import { WorkspaceModule } from './workspaces/workspace.module';
       isGlobal: true,
       validate: validateApiEnvironment,
     }),
+    ThrottlerModule.forRoot([
+      {
+        limit: 300,
+        name: 'default',
+        ttl: 60_000,
+      },
+    ]),
     DatabaseModule,
+    AiConfigurationModule,
     StorageModule,
     AuthModule,
     BillingModule,
@@ -44,6 +54,7 @@ import { WorkspaceModule } from './workspaces/workspace.module';
       provide: StructuredLogger,
       useValue: new StructuredLogger({ service: 'api' }),
     },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: RequestLoggingInterceptor },
   ],
 })

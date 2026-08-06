@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AiConfigurationModule } from '../ai/ai-configuration.module';
 import { AuthModule } from '../auth/auth.module';
 import { WorkspaceModule } from '../workspaces/workspace.module';
 import { DrizzleKnowledgeRepository } from './drizzle-knowledge.repository';
@@ -9,18 +10,18 @@ import {
   KnowledgeService,
   QUERY_EMBEDDING_PROVIDER,
 } from './knowledge.service';
-import { GeminiQueryEmbeddingService } from './query-embedding.service';
+import { WorkspaceQueryEmbeddingService } from './query-embedding.service';
 
 @Module({
   controllers: [KnowledgeController],
   exports: [KnowledgeService],
-  imports: [AuthModule, WorkspaceModule],
+  imports: [AiConfigurationModule, AuthModule, WorkspaceModule],
   providers: [
     KnowledgeService,
-    GeminiQueryEmbeddingService,
+    WorkspaceQueryEmbeddingService,
     {
       provide: QUERY_EMBEDDING_PROVIDER,
-      useExisting: GeminiQueryEmbeddingService,
+      useExisting: WorkspaceQueryEmbeddingService,
     },
     { provide: KNOWLEDGE_REPOSITORY, useClass: DrizzleKnowledgeRepository },
   ],

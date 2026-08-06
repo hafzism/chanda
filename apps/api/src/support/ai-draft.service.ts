@@ -1,10 +1,12 @@
 import {
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 
+import { AiProviderNotConfiguredError } from '../ai/ai-configuration.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { decideAiDraft } from './ai-draft-decision';
 import {
@@ -72,12 +74,18 @@ export class AiDraftService {
         const generated = await this.generator.generate({
           context,
           evidence: citations,
+          workspaceId,
         });
         body = generated.body;
         model = generated.model;
         promptVersion = AI_DRAFT_PROMPT_VERSION;
-        provider = 'gemini';
-      } catch {
+        provider = generated.provider;
+      } catch (error: unknown) {
+        if (error instanceof AiProviderNotConfiguredError) {
+          throw new ConflictException(
+            'Configure an AI provider before generating drafts.',
+          );
+        }
         throw new ServiceUnavailableException(
           'The AI draft service is temporarily unavailable.',
         );

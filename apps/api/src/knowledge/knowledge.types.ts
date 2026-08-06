@@ -1,8 +1,5 @@
 export type KnowledgeVersionStatus =
-  | 'queued'
-  | 'processing'
-  | 'ready'
-  | 'failed';
+  'queued' | 'processing' | 'ready' | 'failed';
 
 export interface KnowledgeDocumentSummary {
   chunkCount: number;
@@ -84,6 +81,7 @@ export interface KnowledgeRepository {
     documentId: string,
   ): Promise<KnowledgeChunkInspection | null>;
   markVersionFailed(
+    workspaceId: string,
     versionId: string,
     errorCode: string,
     errorMessage: string,
@@ -96,7 +94,12 @@ export interface KnowledgeRepository {
   }): Promise<void>;
   semanticSearch(
     workspaceId: string,
-    embedding: number[],
+    embedding: {
+      dimensions: number;
+      model: string;
+      provider: string;
+      vector: number[];
+    },
   ): Promise<KnowledgeRetrievalHit[]>;
   reindexDocument(
     workspaceId: string,

@@ -9,11 +9,6 @@ import {
   sql,
 } from '@suppline/database';
 import { KNOWLEDGE_VERSION_INDEX_REQUESTED } from '@suppline/contracts';
-import {
-  KNOWLEDGE_EMBEDDING_DIMENSIONS,
-  KNOWLEDGE_EMBEDDING_MODEL,
-  KNOWLEDGE_EMBEDDING_PROVIDER,
-} from '@suppline/knowledge';
 
 import { DatabaseService } from '../database/database.service';
 import type {
@@ -229,6 +224,7 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
   }
 
   async markVersionFailed(
+    workspaceId: string,
     versionId: string,
     errorCode: string,
     errorMessage: string,
@@ -236,7 +232,12 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
     await this.database.db
       .update(knowledgeDocumentVersions)
       .set({ errorCode, errorMessage, status: 'failed' })
-      .where(eq(knowledgeDocumentVersions.id, versionId));
+      .where(
+        and(
+          eq(knowledgeDocumentVersions.id, versionId),
+          eq(knowledgeDocumentVersions.workspaceId, workspaceId),
+        ),
+      );
   }
 
   async keywordSearch(
@@ -278,9 +279,14 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
 
   async semanticSearch(
     workspaceId: string,
-    embedding: number[],
+    embedding: {
+      dimensions: number;
+      model: string;
+      provider: string;
+      vector: number[];
+    },
   ): Promise<KnowledgeRetrievalHit[]> {
-    const serialized = JSON.stringify(embedding);
+    const serialized = JSON.stringify(embedding.vector);
     const result = await this.database.db.execute<RetrievalRow>(sql`
       select
         chunk.id as "chunkId",
@@ -304,9 +310,9 @@ export class DrizzleKnowledgeRepository implements KnowledgeRepository {
         and document.workspace_id = ${workspaceId}
         and document.is_enabled = true
         and version.status = 'ready'
-        and version.embedding_provider = ${KNOWLEDGE_EMBEDDING_PROVIDER}
-        and version.embedding_model = ${KNOWLEDGE_EMBEDDING_MODEL}
-        and version.embedding_dimensions = ${KNOWLEDGE_EMBEDDING_DIMENSIONS}
+        and version.embedding_provider = ${embedding.provider}
+        and version.embedding_model = ${embedding.model}
+        and version.embedding_dimensions = ${embedding.dimensions}
         and chunk.embedding is not null
       order by chunk.embedding <=> ${serialized}::vector, chunk.id
       limit 30

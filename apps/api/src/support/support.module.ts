@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 
+import { AiConfigurationModule } from '../ai/ai-configuration.module';
 import { AuthModule } from '../auth/auth.module';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { WorkspaceModule } from '../workspaces/workspace.module';
 import { AI_DRAFT_GENERATOR, AiDraftService } from './ai-draft.service';
-import { GeminiAiDraftGenerator } from './ai-draft-generator';
+import { WorkspaceAiDraftGenerator } from './ai-draft-generator';
 import { ChannelsController } from './channels.controller';
 import { DrizzleSupportRepository } from './drizzle-support.repository';
 import { DrizzleGmailRepository } from './gmail/drizzle-gmail.repository';
@@ -71,11 +72,16 @@ import {
     TelegramController,
     WhatsAppController,
   ],
-  imports: [AuthModule, KnowledgeModule, WorkspaceModule],
+  imports: [
+    AiConfigurationModule,
+    AuthModule,
+    KnowledgeModule,
+    WorkspaceModule,
+  ],
   providers: [
     AiDraftService,
     ChannelCredentialCipher,
-    GeminiAiDraftGenerator,
+    WorkspaceAiDraftGenerator,
     GmailApiService,
     GmailService,
     MetaMessagingApiService,
@@ -86,7 +92,7 @@ import {
     TelegramService,
     WhatsAppCloudApiService,
     WhatsAppService,
-    { provide: AI_DRAFT_GENERATOR, useExisting: GeminiAiDraftGenerator },
+    { provide: AI_DRAFT_GENERATOR, useExisting: WorkspaceAiDraftGenerator },
     { provide: GMAIL_API, useExisting: GmailApiService },
     { provide: GMAIL_REPOSITORY, useClass: DrizzleGmailRepository },
     { provide: META_MESSAGING_API, useExisting: MetaMessagingApiService },

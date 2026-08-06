@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { join } from 'node:path';
 
 import { DatabaseService } from './database.service';
-import { GeminiEmbeddingService } from './embedding.service';
+import { WorkspaceEmbeddingService } from './embedding.service';
 import { validateWorkerEnvironment } from './environment';
 import {
   EMBEDDING_PROVIDER_TOKEN,
@@ -27,14 +27,14 @@ import { SourceStorageService } from './source-storage.service';
   ],
   providers: [
     DatabaseService,
-    GeminiEmbeddingService,
+    WorkspaceEmbeddingService,
     KnowledgeIndexProcessor,
     KnowledgeIndexRepository,
     OutboxPublisher,
     SourceStorageService,
     {
       provide: EMBEDDING_PROVIDER_TOKEN,
-      useExisting: GeminiEmbeddingService,
+      useExisting: WorkspaceEmbeddingService,
     },
   ],
 })

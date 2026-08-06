@@ -14,7 +14,15 @@ describe('worker environment validation', () => {
 
   it('requires every worker dependency in production', () => {
     expect(() => validateWorkerEnvironment({ NODE_ENV: 'production' })).toThrow(
-      /DATABASE_URL.*REDIS_URL.*GEMINI_API_KEY/,
+      /DATABASE_URL.*REDIS_URL.*AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY/,
     );
+  });
+
+  it('rejects non-canonical base64 encryption keys', () => {
+    expect(() =>
+      validateWorkerEnvironment({
+        AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY: `${Buffer.alloc(32, 1).toString('base64')}!ignored`,
+      }),
+    ).toThrow(/base64-encoded 32-byte key/);
   });
 });

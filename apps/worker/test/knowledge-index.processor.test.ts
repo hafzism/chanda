@@ -27,7 +27,13 @@ describe('KnowledgeIndexProcessor', () => {
     vi.clearAllMocks();
     claim.mockResolvedValue(true);
     complete.mockResolvedValue(undefined);
-    embedDocuments.mockResolvedValue([Array.from({ length: 1536 }, () => 0.1)]);
+    embedDocuments.mockResolvedValue({
+      dimensions: 1536,
+      embeddingRevision: 1,
+      model: 'gemini-embedding-2',
+      provider: 'google-gemini',
+      vectors: [Array.from({ length: 1536 }, () => 0.1)],
+    });
     readText.mockResolvedValue(
       '# Returns\n\nCustomers may return unused products within 30 days.',
     );
@@ -43,13 +49,13 @@ describe('KnowledgeIndexProcessor', () => {
 
     expect(claim).toHaveBeenCalledWith(data);
     expect(readText).toHaveBeenCalledWith(data.objectKey);
-    expect(embedDocuments).toHaveBeenCalledWith([
+    expect(embedDocuments).toHaveBeenCalledWith('workspace-1', [
       'Returns\n\nCustomers may return unused products within 30 days.',
     ]);
     const completed = complete.mock.calls[0];
     expect(completed?.[0]).toBe(data);
     expect(completed?.[1]).toHaveLength(1);
-    expect(completed?.[2][0]).toHaveLength(1536);
+    expect(completed?.[2]?.vectors[0]).toHaveLength(1536);
   });
 
   it('does not repeat work for an already-ready version', async () => {

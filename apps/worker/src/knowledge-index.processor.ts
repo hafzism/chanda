@@ -13,7 +13,10 @@ import {
 import { chunkKnowledgeText } from '@suppline/knowledge';
 import { type Job, Worker } from 'bullmq';
 
-import { type EmbeddingProvider } from './embedding.service';
+import {
+  type DocumentEmbeddingResult,
+  type EmbeddingProvider,
+} from './embedding.service';
 import { KnowledgeIndexRepository } from './knowledge-index.repository';
 import { redisConnection } from './redis-connection';
 import { SourceStorageService } from './source-storage.service';
@@ -70,20 +73,36 @@ export class KnowledgeIndexProcessor
     if (chunks.length === 0)
       throw new Error('Knowledge source produced no chunks.');
 
-    const vectors: number[][] = [];
+    const texts = chunks.map((chunk) =>
+      chunk.heading ? `${chunk.heading}\n\n${chunk.content}` : chunk.content,
+    );
+    const embeddingBatches: Array<DocumentEmbeddingResult | null> = [];
     for (let offset = 0; offset < chunks.length; offset += 32) {
-      const batch = chunks.slice(offset, offset + 32);
-      vectors.push(
-        ...(await this.embeddings.embedDocuments(
-          batch.map((chunk) =>
-            chunk.heading
-              ? `${chunk.heading}\n\n${chunk.content}`
-              : chunk.content,
-          ),
-        )),
+      embeddingBatches.push(
+        await this.embeddings.embedDocuments(
+          job.data.workspaceId,
+          texts.slice(offset, offset + 32),
+        ),
       );
     }
-    await this.repository.complete(job.data, chunks, vectors);
+    const firstEmbedding = embeddingBatches[0] ?? null;
+    if (
+      embeddingBatches.some(
+        (batch) =>
+          batch?.provider !== firstEmbedding?.provider ||
+          batch?.model !== firstEmbedding?.model ||
+          batch?.embeddingRevision !== firstEmbedding?.embeddingRevision,
+      )
+    ) {
+      throw new Error('The workspace AI provider changed during indexing.');
+    }
+    const embeddings = firstEmbedding
+      ? {
+          ...firstEmbedding,
+          vectors: embeddingBatches.flatMap((batch) => batch?.vectors ?? []),
+        }
+      : null;
+    await this.repository.complete(job.data, chunks, embeddings);
     this.logger.log({
       chunkCount: chunks.length,
       conversationId: null,

@@ -109,6 +109,7 @@ describe('AiDraftService', () => {
     generate.mockResolvedValue({
       body: 'Standard delivery takes three to five business days.',
       model: 'gemini-3.5-flash',
+      provider: 'google-gemini',
     });
 
     await service.generate('workspace-1', 'conversation-1', 'user-1');
@@ -116,12 +117,13 @@ describe('AiDraftService', () => {
     expect(generate).toHaveBeenCalledWith({
       context,
       evidence: [expect.objectContaining(evidence)],
+      workspaceId: 'workspace-1',
     });
     expect(saveDraft).toHaveBeenCalledWith(
       expect.objectContaining({
         model: 'gemini-3.5-flash',
-        promptVersion: 'support-draft-v1',
-        provider: 'gemini',
+        promptVersion: 'support-draft-v2',
+        provider: 'google-gemini',
         readinessScore: 80,
         requiresHuman: false,
       }),

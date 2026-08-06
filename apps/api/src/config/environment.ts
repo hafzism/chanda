@@ -6,7 +6,7 @@ const PRODUCTION_REQUIRED = [
   'FIREBASE_PROJECT_ID',
   'FIREBASE_CLIENT_EMAIL',
   'FIREBASE_PRIVATE_KEY',
-  'GEMINI_API_KEY',
+  'AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY',
   'CHANNEL_CREDENTIALS_ENCRYPTION_KEY',
   'TELEGRAM_WEBHOOK_BASE_URL',
   'GOOGLE_GMAIL_CLIENT_ID',
@@ -65,13 +65,15 @@ function validateUrl(
   }
 }
 
-function validateEncryptionKey(environment: Record<string, unknown>): void {
-  const encoded = valueOf(environment, 'CHANNEL_CREDENTIALS_ENCRYPTION_KEY');
+function validateEncryptionKey(
+  environment: Record<string, unknown>,
+  name: string,
+): void {
+  const encoded = valueOf(environment, name);
   if (!encoded) return;
-  if (Buffer.from(encoded, 'base64').length !== 32) {
-    throw new Error(
-      'CHANNEL_CREDENTIALS_ENCRYPTION_KEY must be a base64-encoded 32-byte key.',
-    );
+  const key = Buffer.from(encoded, 'base64');
+  if (key.length !== 32 || key.toString('base64') !== encoded) {
+    throw new Error(`${name} must be a base64-encoded 32-byte key.`);
   }
 }
 
@@ -91,6 +93,7 @@ export function validateApiEnvironment(
     'http:',
     'https:',
   ]);
-  validateEncryptionKey(environment);
+  validateEncryptionKey(environment, 'CHANNEL_CREDENTIALS_ENCRYPTION_KEY');
+  validateEncryptionKey(environment, 'AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY');
   return environment;
 }

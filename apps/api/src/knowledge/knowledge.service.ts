@@ -77,7 +77,7 @@ export class KnowledgeService {
     try {
       semantic = await this.repository.semanticSearch(
         workspaceId,
-        await this.queryEmbeddings.embedQuery(query),
+        await this.queryEmbeddings.embedQuery(workspaceId, query),
       );
     } catch (error: unknown) {
       mode = 'keyword';
@@ -155,6 +155,7 @@ export class KnowledgeService {
       await this.storage.putText({ content, contentHash, key: objectKey });
     } catch (error: unknown) {
       await this.repository.markVersionFailed(
+        workspaceId,
         versionId,
         'storage_write_failed',
         error instanceof Error ? error.message : 'Object storage write failed.',
@@ -175,6 +176,7 @@ export class KnowledgeService {
       await Promise.allSettled([
         this.storage.delete(objectKey),
         this.repository.markVersionFailed(
+          workspaceId,
           versionId,
           'index_schedule_failed',
           error instanceof Error
@@ -254,6 +256,7 @@ export class KnowledgeService {
         this.storage.delete(objectKey),
         this.storage.delete(extractedObjectKey),
         this.repository.markVersionFailed(
+          workspaceId,
           versionId,
           'storage_write_failed',
           error instanceof Error
@@ -278,6 +281,7 @@ export class KnowledgeService {
         this.storage.delete(objectKey),
         this.storage.delete(extractedObjectKey),
         this.repository.markVersionFailed(
+          workspaceId,
           versionId,
           'index_schedule_failed',
           error instanceof Error

@@ -12,6 +12,7 @@ import type {
   KnowledgeDocumentSummary,
   KnowledgeRepository,
 } from '../src/knowledge/knowledge.types';
+import type { QueryEmbeddingProvider } from '../src/knowledge/query-embedding.service';
 import type { ObjectStorage } from '../src/storage/storage.types';
 
 const summary: KnowledgeDocumentSummary = {
@@ -41,7 +42,7 @@ describe('KnowledgeService', () => {
   >;
   let semanticSearchMock: MockedFunction<KnowledgeRepository['semanticSearch']>;
   let reindexMock: MockedFunction<KnowledgeRepository['reindexDocument']>;
-  const embedQueryMock = vi.fn<(query: string) => Promise<number[]>>();
+  const embedQueryMock = vi.fn<QueryEmbeddingProvider['embedQuery']>();
   let setEnabledMock: MockedFunction<KnowledgeRepository['setEnabled']>;
   let deleteMock: MockedFunction<ObjectStorage['delete']>;
   let putTextMock: MockedFunction<ObjectStorage['putText']>;
@@ -84,7 +85,12 @@ describe('KnowledgeService', () => {
     reindexMock = vi
       .fn<KnowledgeRepository['reindexDocument']>()
       .mockResolvedValue('queued');
-    embedQueryMock.mockResolvedValue([0.1, 0.2]);
+    embedQueryMock.mockResolvedValue({
+      dimensions: 1536,
+      model: 'gemini-embedding-2',
+      provider: 'google-gemini',
+      vector: [0.1, 0.2],
+    });
     putTextMock = vi
       .fn<ObjectStorage['putText']>()
       .mockResolvedValue(undefined);
@@ -232,6 +238,7 @@ describe('KnowledgeService', () => {
 
     expect(deleteMock).toHaveBeenCalledTimes(2);
     expect(markFailedMock).toHaveBeenCalledWith(
+      'workspace-1',
       expect.any(String),
       'index_schedule_failed',
       'database unavailable',
@@ -258,6 +265,7 @@ describe('KnowledgeService', () => {
       }),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(markFailedMock).toHaveBeenCalledWith(
+      'workspace-1',
       expect.any(String),
       'storage_write_failed',
       'storage offline',
@@ -276,6 +284,7 @@ describe('KnowledgeService', () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(deleteMock).toHaveBeenCalledOnce();
     expect(markFailedMock).toHaveBeenCalledWith(
+      'workspace-1',
       expect.any(String),
       'index_schedule_failed',
       'database unavailable',

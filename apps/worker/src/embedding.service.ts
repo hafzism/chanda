@@ -1,53 +1,80 @@
-import { Injectable } from '@nestjs/common';
-import { GoogleGenAI } from '@google/genai';
 import {
-  KNOWLEDGE_EMBEDDING_DIMENSIONS,
-  KNOWLEDGE_EMBEDDING_MODEL,
-} from '@suppline/knowledge';
+  createAiProviderClient,
+  decryptAiCredential,
+  getAiProviderModelConfiguration,
+  parseAiCredentialEncryptionKey,
+  type AiProvider,
+} from '@suppline/ai';
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { eq, workspaceAiConfigurations } from '@suppline/database';
+
+import { DatabaseService } from './database.service';
+
+export interface DocumentEmbeddingResult {
+  dimensions: number;
+  embeddingRevision: number;
+  model: string;
+  provider: AiProvider;
+  vectors: number[][];
+}
 
 export interface EmbeddingProvider {
-  embedDocuments(texts: string[]): Promise<number[][]>;
+  embedDocuments(
+    workspaceId: string,
+    texts: string[],
+  ): Promise<DocumentEmbeddingResult | null>;
 }
 
 @Injectable()
-export class GeminiEmbeddingService implements EmbeddingProvider {
-  private client: GoogleGenAI | null = null;
+export class WorkspaceEmbeddingService implements EmbeddingProvider {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly database: DatabaseService,
+  ) {}
 
-  async embedDocuments(texts: string[]): Promise<number[][]> {
-    if (texts.length === 0) return [];
-    const response = await this.getClient().models.embedContent({
-      config: { outputDimensionality: KNOWLEDGE_EMBEDDING_DIMENSIONS },
-      contents: texts.map((text) => ({
-        parts: [
-          {
-            text: `Represent this customer-support knowledge for retrieval.\n\n${text}`,
-          },
-        ],
-        role: 'user',
-      })),
-      model: KNOWLEDGE_EMBEDDING_MODEL,
-    });
-    const vectors = response.embeddings?.map((embedding) => embedding.values);
+  async embedDocuments(
+    workspaceId: string,
+    texts: string[],
+  ): Promise<DocumentEmbeddingResult | null> {
+    if (texts.length === 0) return null;
+    const records = await this.database.db
+      .select()
+      .from(workspaceAiConfigurations)
+      .where(eq(workspaceAiConfigurations.workspaceId, workspaceId))
+      .limit(1);
+    const stored = records[0];
+    if (!stored) return null;
+
+    const expected = getAiProviderModelConfiguration(stored.provider);
     if (
-      !vectors ||
-      vectors.length !== texts.length ||
-      vectors.some(
-        (vector) =>
-          !vector ||
-          vector.length !== KNOWLEDGE_EMBEDDING_DIMENSIONS ||
-          vector.some((value) => !Number.isFinite(value)),
-      )
+      stored.embeddingModel !== expected.embeddingModel ||
+      stored.embeddingDimensions !== expected.embeddingDimensions ||
+      stored.generationModel !== expected.generationModel
     ) {
-      throw new Error('The embedding provider returned an invalid vector set.');
+      throw new Error('The workspace AI provider must be revalidated.');
     }
-    return vectors as number[][];
-  }
-
-  private getClient(): GoogleGenAI {
-    if (this.client) return this.client;
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
-    if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
-    this.client = new GoogleGenAI({ apiKey });
-    return this.client;
+    const encryptionKey = parseAiCredentialEncryptionKey(
+      (
+        this.config.get<string>('AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY') ?? ''
+      ).trim(),
+    );
+    const apiKey = decryptAiCredential({
+      encryptedApiKey: stored.encryptedApiKey,
+      encryptionKey,
+      provider: stored.provider,
+      workspaceId,
+    });
+    const client = createAiProviderClient({
+      apiKey,
+      provider: stored.provider,
+    });
+    return {
+      dimensions: expected.embeddingDimensions,
+      embeddingRevision: stored.embeddingRevision,
+      model: expected.embeddingModel,
+      provider: stored.provider,
+      vectors: await client.embedDocuments(texts),
+    };
   }
 }

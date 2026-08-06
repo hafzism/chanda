@@ -25,5 +25,15 @@ describe('API environment validation', () => {
     expect(() =>
       validateApiEnvironment({ CHANNEL_CREDENTIALS_ENCRYPTION_KEY: 'short' }),
     ).toThrow(/base64-encoded 32-byte key/);
+    expect(() =>
+      validateApiEnvironment({
+        AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY: 'short',
+      }),
+    ).toThrow(/AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY/);
+    expect(() =>
+      validateApiEnvironment({
+        AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY: `${Buffer.alloc(32, 1).toString('base64')}!ignored`,
+      }),
+    ).toThrow(/AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY/);
   });
 });

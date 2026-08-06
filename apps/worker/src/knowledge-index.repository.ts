@@ -5,16 +5,13 @@ import {
   eq,
   knowledgeChunks,
   knowledgeDocumentVersions,
+  ne,
   sql,
 } from '@suppline/database';
-import {
-  KNOWLEDGE_EMBEDDING_DIMENSIONS,
-  KNOWLEDGE_EMBEDDING_MODEL,
-  KNOWLEDGE_EMBEDDING_PROVIDER,
-  type KnowledgeChunk,
-} from '@suppline/knowledge';
+import type { KnowledgeChunk } from '@suppline/knowledge';
 
 import { DatabaseService } from './database.service';
+import type { DocumentEmbeddingResult } from './embedding.service';
 
 @Injectable()
 export class KnowledgeIndexRepository {
@@ -40,16 +37,21 @@ export class KnowledgeIndexRepository {
   async complete(
     job: KnowledgeIndexJob,
     chunks: KnowledgeChunk[],
-    embeddings: number[][],
+    embeddings: DocumentEmbeddingResult | null,
   ): Promise<void> {
-    if (chunks.length !== embeddings.length) {
+    if (embeddings && chunks.length !== embeddings.vectors.length) {
       throw new Error('Chunk and embedding counts do not match.');
     }
 
     await this.database.db.transaction(async (transaction) => {
       await transaction
         .delete(knowledgeChunks)
-        .where(eq(knowledgeChunks.documentVersionId, job.versionId));
+        .where(
+          and(
+            eq(knowledgeChunks.documentVersionId, job.versionId),
+            eq(knowledgeChunks.workspaceId, job.workspaceId),
+          ),
+        );
       if (chunks.length > 0) {
         await transaction.insert(knowledgeChunks).values(
           chunks.map((chunk, index) => ({
@@ -59,7 +61,7 @@ export class KnowledgeIndexRepository {
             contentHash: chunk.contentHash,
             documentId: job.documentId,
             documentVersionId: job.versionId,
-            embedding: embeddings[index],
+            embedding: embeddings?.vectors[index] ?? null,
             estimatedTokenCount: chunk.estimatedTokenCount,
             heading: chunk.heading,
             ordinal: chunk.ordinal,
@@ -68,26 +70,45 @@ export class KnowledgeIndexRepository {
         );
       }
 
-      const updated = await transaction
-        .update(knowledgeDocumentVersions)
-        .set({
-          chunkCount: chunks.length,
-          embeddingDimensions: KNOWLEDGE_EMBEDDING_DIMENSIONS,
-          embeddingModel: KNOWLEDGE_EMBEDDING_MODEL,
-          embeddingProvider: KNOWLEDGE_EMBEDDING_PROVIDER,
-          indexedAt: new Date(),
-          status: 'ready',
-        })
-        .where(
-          and(
-            eq(knowledgeDocumentVersions.id, job.versionId),
-            eq(knowledgeDocumentVersions.workspaceId, job.workspaceId),
-            eq(knowledgeDocumentVersions.documentId, job.documentId),
-          ),
-        )
-        .returning({ id: knowledgeDocumentVersions.id });
-      if (updated.length !== 1) {
-        throw new Error('Knowledge version disappeared during indexing.');
+      const updated = await transaction.execute<
+        { id: string } & Record<string, unknown>
+      >(sql`
+        update knowledge_document_versions version
+        set
+          chunk_count = ${chunks.length},
+          embedding_dimensions = ${embeddings?.dimensions ?? null},
+          embedding_model = ${embeddings?.model ?? null},
+          embedding_provider = ${embeddings?.provider ?? null},
+          indexed_at = now(),
+          status = 'ready'
+        where version.id = ${job.versionId}
+          and version.workspace_id = ${job.workspaceId}
+          and version.document_id = ${job.documentId}
+          and (
+            (
+              ${embeddings === null}
+              and not exists (
+                select 1
+                from workspace_ai_configurations configuration
+                where configuration.workspace_id = ${job.workspaceId}
+              )
+            )
+            or exists (
+              select 1
+              from workspace_ai_configurations configuration
+              where configuration.workspace_id = ${job.workspaceId}
+                and configuration.provider = ${embeddings?.provider ?? null}
+                and configuration.embedding_model = ${embeddings?.model ?? null}
+                and configuration.embedding_dimensions = ${embeddings?.dimensions ?? null}
+                and configuration.embedding_revision = ${embeddings?.embeddingRevision ?? null}
+            )
+          )
+        returning version.id
+      `);
+      if (updated.rows.length !== 1) {
+        throw new Error(
+          'The knowledge version or workspace AI provider changed during indexing.',
+        );
       }
     });
   }
@@ -105,6 +126,7 @@ export class KnowledgeIndexRepository {
           eq(knowledgeDocumentVersions.id, job.versionId),
           eq(knowledgeDocumentVersions.workspaceId, job.workspaceId),
           eq(knowledgeDocumentVersions.documentId, job.documentId),
+          ne(knowledgeDocumentVersions.status, 'ready'),
         ),
       );
   }

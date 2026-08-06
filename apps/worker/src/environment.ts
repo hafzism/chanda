@@ -3,7 +3,7 @@ const PRODUCTION_REQUIRED = [
   'REDIS_URL',
   'S3_REGION',
   'S3_BUCKET',
-  'GEMINI_API_KEY',
+  'AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY',
 ] as const;
 
 function valueOf(environment: Record<string, unknown>, name: string): string {
@@ -29,6 +29,20 @@ function validateUrl(
   }
 }
 
+function validateEncryptionKey(environment: Record<string, unknown>): void {
+  const encoded = valueOf(
+    environment,
+    'AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY',
+  );
+  if (!encoded) return;
+  const key = Buffer.from(encoded, 'base64');
+  if (key.length !== 32 || key.toString('base64') !== encoded) {
+    throw new Error(
+      'AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY must be a base64-encoded 32-byte key.',
+    );
+  }
+}
+
 export function validateWorkerEnvironment(
   environment: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -45,5 +59,6 @@ export function validateWorkerEnvironment(
   validateUrl(environment, 'DATABASE_URL', ['postgres:', 'postgresql:']);
   validateUrl(environment, 'REDIS_URL', ['redis:', 'rediss:']);
   validateUrl(environment, 'S3_ENDPOINT', ['http:', 'https:']);
+  validateEncryptionKey(environment);
   return environment;
 }

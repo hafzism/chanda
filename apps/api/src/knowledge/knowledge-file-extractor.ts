@@ -87,7 +87,7 @@ export class KnowledgeFileExtractor {
       return result.text;
     } catch {
       throw new BadRequestException(
-        'Suppline could not extract text from this PDF. Password-protected or damaged PDFs are not supported.',
+        'Chanda could not extract text from this PDF. Password-protected or damaged PDFs are not supported.',
       );
     }
   }
