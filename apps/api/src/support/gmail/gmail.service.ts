@@ -86,6 +86,7 @@ export class GmailService {
       emailAddress: profile.emailAddress.toLowerCase(),
       encryptedCredentials: this.cipher.encrypt(
         JSON.stringify({ refreshToken: tokens.refreshToken }),
+        { kind: 'gmail', workspaceId: pending.workspaceId },
       ),
       historyId: profile.historyId,
       workspaceId: pending.workspaceId,
@@ -98,7 +99,7 @@ export class GmailService {
     if (!credential) throw new NotFoundException('Gmail is not connected.');
     try {
       const accessToken = await this.api.refreshAccessToken(
-        this.readRefreshToken(credential.encryptedCredentials),
+        this.readRefreshToken(credential.encryptedCredentials, workspaceId),
       );
       const emailAddress = readSetting(credential.settings, 'emailAddress');
       const previousHistoryId = readSetting(credential.settings, 'historyId');
@@ -154,7 +155,7 @@ export class GmailService {
     const credential = await this.repository.findCredential(workspaceId);
     if (!credential) throw new NotFoundException('Gmail is not connected.');
     await this.api.revoke(
-      this.readRefreshToken(credential.encryptedCredentials),
+      this.readRefreshToken(credential.encryptedCredentials, workspaceId),
     );
     if (!(await this.repository.disconnect(workspaceId))) {
       throw new NotFoundException('Gmail is not connected.');
@@ -175,7 +176,7 @@ export class GmailService {
     if (!context) throw new NotFoundException('Conversation not found.');
     if (context.channel !== 'gmail') return undefined;
     const accessToken = await this.api.refreshAccessToken(
-      this.readRefreshToken(context.encryptedCredentials),
+      this.readRefreshToken(context.encryptedCredentials, workspaceId),
     );
     const result = await this.api.sendMessage(accessToken, {
       raw: createReplyMime({
@@ -214,11 +215,11 @@ export class GmailService {
     };
   }
 
-  private readRefreshToken(encrypted: string) {
+  private readRefreshToken(encrypted: string, workspaceId: string) {
     try {
-      const parsed = JSON.parse(this.cipher.decrypt(encrypted)) as {
-        refreshToken?: unknown;
-      };
+      const parsed = JSON.parse(
+        this.cipher.decrypt(encrypted, { kind: 'gmail', workspaceId }),
+      ) as { refreshToken?: unknown };
       if (typeof parsed.refreshToken !== 'string') throw new Error('missing');
       return parsed.refreshToken;
     } catch (error: unknown) {

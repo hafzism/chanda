@@ -34,7 +34,7 @@ describe('WhatsAppService', () => {
       getPhone: vi.fn().mockResolvedValue({
         displayPhoneNumber: '+1 555 0100',
         id: '123456789',
-        verifiedName: 'Suppline Test',
+        verifiedName: 'Chanda Test',
       }),
       sendText: vi.fn().mockResolvedValue({ messageId: 'wamid.sent-1' }),
     };
@@ -96,6 +96,7 @@ describe('WhatsAppService', () => {
       encryptedCredentials: 'unused',
       phoneNumberId: '123456789',
       webhookSecretHash: createHash('sha256').update(token).digest('hex'),
+      workspaceId: 'workspace-1',
     });
 
     await expect(
@@ -113,9 +114,11 @@ describe('WhatsAppService', () => {
     vi.mocked(repository.findWebhookCredential).mockResolvedValue({
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ accessToken: 'token', appSecret: 'a'.repeat(32) }),
+        { kind: 'whatsapp', workspaceId: 'workspace-1' },
       ),
       phoneNumberId: '123456789',
       webhookSecretHash: 'unused',
+      workspaceId: 'workspace-1',
     });
 
     await expect(
@@ -136,9 +139,11 @@ describe('WhatsAppService', () => {
     vi.mocked(repository.findWebhookCredential).mockResolvedValue({
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ accessToken: 'token', appSecret }),
+        { kind: 'whatsapp', workspaceId: 'workspace-1' },
       ),
       phoneNumberId: '123456789',
       webhookSecretHash: 'unused',
+      workspaceId: 'workspace-1',
     });
     vi.mocked(repository.ingest).mockResolvedValue({
       conversationId: 'conversation-1',
@@ -174,6 +179,7 @@ describe('WhatsAppService', () => {
       channel: 'whatsapp',
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ accessToken: 'token', appSecret: 'a'.repeat(32) }),
+        { kind: 'whatsapp', workspaceId: 'workspace-1' },
       ),
       lastInboundAt: new Date(),
       phoneNumber: '919876543210',
@@ -194,6 +200,7 @@ describe('WhatsAppService', () => {
       channel: 'whatsapp',
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ accessToken: 'token', appSecret: 'a'.repeat(32) }),
+        { kind: 'whatsapp', workspaceId: 'workspace-1' },
       ),
       lastInboundAt: new Date(Date.now() - 25 * 60 * 60_000),
       phoneNumber: '919876543210',

@@ -72,6 +72,7 @@ export class MetaMessagingService {
       connectionId,
       encryptedCredentials: this.cipher.encrypt(
         JSON.stringify({ appSecret, pageAccessToken }),
+        { kind, workspaceId },
       ),
       kind,
       webhookSecretHash: hash(verifyToken),
@@ -126,7 +127,11 @@ export class MetaMessagingService {
     if (!signature || !rawBody) {
       throw new ForbiddenException('Meta webhook signature is missing.');
     }
-    const { appSecret } = this.readCredentials(credential.encryptedCredentials);
+    const { appSecret } = this.readCredentials(
+      credential.encryptedCredentials,
+      credential.workspaceId,
+      kind,
+    );
     const expected = `sha256=${createHmac('sha256', appSecret)
       .update(rawBody)
       .digest('hex')}`;
@@ -176,6 +181,8 @@ export class MetaMessagingService {
     }
     const { pageAccessToken } = this.readCredentials(
       context.encryptedCredentials,
+      workspaceId,
+      context.channel,
     );
     const result = await this.api.sendText(
       context.channel,
@@ -187,12 +194,15 @@ export class MetaMessagingService {
     return result.messageId;
   }
 
-  private readCredentials(encrypted: string) {
+  private readCredentials(
+    encrypted: string,
+    workspaceId: string,
+    kind: MetaChannelKind,
+  ) {
     try {
-      const parsed = JSON.parse(this.cipher.decrypt(encrypted)) as {
-        appSecret?: unknown;
-        pageAccessToken?: unknown;
-      };
+      const parsed = JSON.parse(
+        this.cipher.decrypt(encrypted, { kind, workspaceId }),
+      ) as { appSecret?: unknown; pageAccessToken?: unknown };
       if (
         typeof parsed.appSecret !== 'string' ||
         typeof parsed.pageAccessToken !== 'string'

@@ -12,7 +12,7 @@ describe('WhatsAppCloudApiService', () => {
         JSON.stringify({
           display_phone_number: '+1 555 0100',
           id: '123456789',
-          verified_name: 'Suppline Test',
+          verified_name: 'Chanda Test',
         }),
         { status: 200 },
       ),
@@ -25,7 +25,7 @@ describe('WhatsAppCloudApiService', () => {
     await expect(api.getPhone('secret-token', '123456789')).resolves.toEqual({
       displayPhoneNumber: '+1 555 0100',
       id: '123456789',
-      verifiedName: 'Suppline Test',
+      verifiedName: 'Chanda Test',
     });
     expect(fetchMock).toHaveBeenCalledWith(
       'https://graph.facebook.com/v24.0/123456789?fields=id,display_phone_number,verified_name',

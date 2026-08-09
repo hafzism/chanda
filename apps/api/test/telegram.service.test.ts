@@ -39,9 +39,9 @@ describe('TelegramService', () => {
     api = {
       deleteWebhook: vi.fn().mockResolvedValue(undefined),
       getMe: vi.fn().mockResolvedValue({
-        firstName: 'Suppline Help',
+        firstName: 'Chanda Help',
         id: '123456789',
-        username: 'suppline_help_bot',
+        username: 'chanda_help_bot',
       }),
       sendMessage,
       setWebhook,
@@ -90,7 +90,7 @@ describe('TelegramService', () => {
       '123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi_12345',
     );
 
-    expect(result.botUsername).toBe('suppline_help_bot');
+    expect(result.botUsername).toBe('chanda_help_bot');
     const webhookCall = setWebhook.mock.calls[0];
     const savedInput = saveConnection.mock.calls[0]?.[0];
     expect(webhookCall?.[0]).toBe(
@@ -132,6 +132,7 @@ describe('TelegramService', () => {
       chatId: '998877',
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ botToken: '123:secret-token' }),
+        { kind: 'telegram', workspaceId: 'workspace-1' },
       ),
     });
 

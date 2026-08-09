@@ -106,7 +106,7 @@ export class DrizzleMetaMessagingRepository implements MetaMessagingRepository {
         .onConflictDoUpdate({
           set: {
             encryptedCredentials: input.encryptedCredentials,
-            encryptionKeyVersion: 1,
+            encryptionKeyVersion: 2,
             updatedAt: new Date(),
             webhookSecretHash: input.webhookSecretHash,
             workspaceId: input.workspaceId,
@@ -175,6 +175,7 @@ export class DrizzleMetaMessagingRepository implements MetaMessagingRepository {
         encryptedCredentials: channelConnectionSecrets.encryptedCredentials,
         settings: channelConnections.settings,
         webhookSecretHash: channelConnectionSecrets.webhookSecretHash,
+        workspaceId: channelConnections.workspaceId,
       })
       .from(channelConnectionSecrets)
       .innerJoin(
@@ -200,6 +201,7 @@ export class DrizzleMetaMessagingRepository implements MetaMessagingRepository {
       assetId,
       encryptedCredentials: credential.encryptedCredentials,
       webhookSecretHash: credential.webhookSecretHash,
+      workspaceId: credential.workspaceId,
     };
   }
 
@@ -445,7 +447,12 @@ export class DrizzleMetaMessagingRepository implements MetaMessagingRepository {
       await transaction
         .update(channelConnections)
         .set({ lastInboundAt: now, updatedAt: now })
-        .where(eq(channelConnections.id, connection.id));
+        .where(
+          and(
+            eq(channelConnections.id, connection.id),
+            eq(channelConnections.workspaceId, connection.workspaceId),
+          ),
+        );
       await transaction
         .update(conversations)
         .set({

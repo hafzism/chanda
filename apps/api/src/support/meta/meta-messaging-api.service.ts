@@ -85,8 +85,7 @@ export class MetaMessagingApiService implements MetaMessagingApi {
       throw new BadGatewayException('Meta Graph API could not be reached.');
     }
     const payload = (await response.json().catch(() => null)) as
-      | (T & { error?: { message?: string } })
-      | null;
+      (T & { error?: { message?: string } }) | null;
     if (!response.ok || !payload) {
       throw new UnauthorizedException(
         payload?.error?.message ?? 'Meta rejected this account or token.',

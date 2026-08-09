@@ -73,6 +73,7 @@ export class WhatsAppService {
       connectionId,
       encryptedCredentials: this.cipher.encrypt(
         JSON.stringify({ accessToken, appSecret }),
+        { kind: 'whatsapp', workspaceId },
       ),
       phone,
       webhookSecretHash: hash(verifyToken),
@@ -121,7 +122,10 @@ export class WhatsAppService {
     if (!signature || !rawBody) {
       throw new ForbiddenException('WhatsApp webhook signature is missing.');
     }
-    const { appSecret } = this.readCredentials(credential.encryptedCredentials);
+    const { appSecret } = this.readCredentials(
+      credential.encryptedCredentials,
+      credential.workspaceId,
+    );
     const expected = `sha256=${createHmac('sha256', appSecret)
       .update(rawBody)
       .digest('hex')}`;
@@ -172,7 +176,10 @@ export class WhatsAppService {
         'The WhatsApp 24-hour customer service window has closed. An approved Meta template is required before free-form replies can resume.',
       );
     }
-    const { accessToken } = this.readCredentials(context.encryptedCredentials);
+    const { accessToken } = this.readCredentials(
+      context.encryptedCredentials,
+      workspaceId,
+    );
     const result = await this.api.sendText(
       accessToken,
       context.phoneNumberId,
@@ -182,12 +189,11 @@ export class WhatsAppService {
     return result.messageId;
   }
 
-  private readCredentials(encrypted: string) {
+  private readCredentials(encrypted: string, workspaceId: string) {
     try {
-      const parsed = JSON.parse(this.cipher.decrypt(encrypted)) as {
-        accessToken?: unknown;
-        appSecret?: unknown;
-      };
+      const parsed = JSON.parse(
+        this.cipher.decrypt(encrypted, { kind: 'whatsapp', workspaceId }),
+      ) as { accessToken?: unknown; appSecret?: unknown };
       if (
         typeof parsed.accessToken !== 'string' ||
         typeof parsed.appSecret !== 'string'

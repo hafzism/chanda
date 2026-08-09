@@ -733,7 +733,12 @@ export class DrizzleSupportRepository implements SupportRepository {
         const [ticket] = await transaction
           .select({ number: tickets.number })
           .from(tickets)
-          .where(eq(tickets.conversationId, conversationId))
+          .where(
+            and(
+              eq(tickets.conversationId, conversationId),
+              eq(tickets.workspaceId, connection.workspaceId),
+            ),
+          )
           .limit(1);
         if (!ticket) throw new Error('Conversation ticket is unavailable.');
         ticketNumber = ticket.number;
@@ -786,7 +791,12 @@ export class DrizzleSupportRepository implements SupportRepository {
         await transaction
           .update(channelConnections)
           .set({ lastInboundAt: occurredAt, updatedAt: occurredAt })
-          .where(eq(channelConnections.id, connection.id));
+          .where(
+            and(
+              eq(channelConnections.id, connection.id),
+              eq(channelConnections.workspaceId, connection.workspaceId),
+            ),
+          );
       }
 
       return { conversationId, messageId, ticketNumber };

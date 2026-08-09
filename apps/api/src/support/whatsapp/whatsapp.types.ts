@@ -62,6 +62,7 @@ export interface WhatsAppRepository {
     encryptedCredentials: string;
     phoneNumberId: string;
     webhookSecretHash: string;
+    workspaceId: string;
   } | null>;
   ingest(
     connectionId: string,

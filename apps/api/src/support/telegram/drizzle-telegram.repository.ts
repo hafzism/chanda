@@ -101,7 +101,7 @@ export class DrizzleTelegramRepository implements TelegramRepository {
         .onConflictDoUpdate({
           set: {
             encryptedCredentials: input.encryptedCredentials,
-            encryptionKeyVersion: 1,
+            encryptionKeyVersion: 2,
             updatedAt: new Date(),
             webhookSecretHash: input.webhookSecretHash,
             workspaceId: input.workspaceId,
@@ -399,7 +399,12 @@ export class DrizzleTelegramRepository implements TelegramRepository {
       await transaction
         .update(channelConnections)
         .set({ lastInboundAt: now, updatedAt: now })
-        .where(eq(channelConnections.id, connection.id));
+        .where(
+          and(
+            eq(channelConnections.id, connection.id),
+            eq(channelConnections.workspaceId, connection.workspaceId),
+          ),
+        );
       await transaction
         .update(conversations)
         .set({

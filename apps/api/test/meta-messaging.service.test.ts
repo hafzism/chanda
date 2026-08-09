@@ -33,7 +33,7 @@ describe('MetaMessagingService', () => {
     api = {
       getAsset: vi.fn().mockResolvedValue({
         id: 'page-1',
-        name: 'Suppline Page',
+        name: 'Chanda Page',
         username: null,
       }),
       sendText: vi.fn().mockResolvedValue({ messageId: 'm_mid.sent-1' }),
@@ -97,8 +97,10 @@ describe('MetaMessagingService', () => {
           appSecret: 'a'.repeat(32),
           pageAccessToken: 'page-token',
         }),
+        { kind: 'facebook', workspaceId: 'workspace-1' },
       ),
       webhookSecretHash: 'unused',
+      workspaceId: 'workspace-1',
     });
 
     await expect(
@@ -120,8 +122,10 @@ describe('MetaMessagingService', () => {
       assetId: 'page-1',
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ appSecret, pageAccessToken: 'page-token' }),
+        { kind: 'facebook', workspaceId: 'workspace-1' },
       ),
       webhookSecretHash: 'unused',
+      workspaceId: 'workspace-1',
     });
     vi.mocked(repository.ingest).mockResolvedValue({
       conversationId: 'conversation-1',
@@ -165,6 +169,7 @@ describe('MetaMessagingService', () => {
           appSecret: 'a'.repeat(32),
           pageAccessToken: 'page-token',
         }),
+        { kind: 'facebook', workspaceId: 'workspace-1' },
       ),
       lastInboundAt: new Date(Date.now() - 25 * 60 * 60_000),
       recipientId: 'psid-1',

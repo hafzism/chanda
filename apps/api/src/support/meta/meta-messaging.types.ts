@@ -71,6 +71,7 @@ export interface MetaMessagingRepository {
     assetId: string;
     encryptedCredentials: string;
     webhookSecretHash: string;
+    workspaceId: string;
   } | null>;
   ingest(
     connectionId: string,

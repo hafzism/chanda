@@ -11,7 +11,7 @@ describe('MetaMessagingApiService', () => {
       new Response(
         JSON.stringify({
           id: '1784140000',
-          name: 'Suppline',
+          name: 'Chanda',
           username: 'suppline',
         }),
         { status: 200 },
@@ -26,7 +26,7 @@ describe('MetaMessagingApiService', () => {
       api.getAsset('instagram', 'page-token', '1784140000'),
     ).resolves.toEqual({
       id: '1784140000',
-      name: 'Suppline',
+      name: 'Chanda',
       username: 'suppline',
     });
     expect(fetchMock).toHaveBeenCalledWith(

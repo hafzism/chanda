@@ -58,12 +58,13 @@ export class TelegramService {
       ? await this.repository.findWebhookCredential(existing.id)
       : null;
     const oldToken = oldCredential
-      ? this.readToken(oldCredential.encryptedCredentials)
+      ? this.readToken(oldCredential.encryptedCredentials, workspaceId)
       : null;
     const secretToken = randomBytes(32).toString('base64url');
     const webhookUrl = `${webhookBaseUrl}/v1/public/telegram/${connectionId}/webhook`;
     const encryptedCredentials = this.cipher.encrypt(
       JSON.stringify({ botToken: token }),
+      { kind: 'telegram', workspaceId },
     );
 
     await this.api.setWebhook(token, { secretToken, url: webhookUrl });
@@ -99,7 +100,7 @@ export class TelegramService {
         'Telegram credentials are unavailable. Reconnect the bot first.',
       );
     await this.api.deleteWebhook(
-      this.readToken(credential.encryptedCredentials),
+      this.readToken(credential.encryptedCredentials, workspaceId),
     );
     if (!(await this.repository.disconnect(workspaceId))) {
       throw new NotFoundException('Telegram connection not found.');
@@ -150,18 +151,21 @@ export class TelegramService {
       );
     }
     const result = await this.api.sendMessage(
-      this.readToken(context.encryptedCredentials),
+      this.readToken(context.encryptedCredentials, workspaceId),
       context.chatId,
       body,
     );
     return `${context.chatId}:${result.messageId}`;
   }
 
-  private readToken(encryptedCredentials: string): string {
+  private readToken(encryptedCredentials: string, workspaceId: string): string {
     try {
-      const parsed = JSON.parse(this.cipher.decrypt(encryptedCredentials)) as {
-        botToken?: unknown;
-      };
+      const parsed = JSON.parse(
+        this.cipher.decrypt(encryptedCredentials, {
+          kind: 'telegram',
+          workspaceId,
+        }),
+      ) as { botToken?: unknown };
       if (typeof parsed.botToken !== 'string') throw new Error('missing token');
       return parsed.botToken;
     } catch (error: unknown) {

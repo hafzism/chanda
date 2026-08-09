@@ -41,7 +41,7 @@ export class GmailApiService implements GmailApi {
     });
     if (typeof payload.refresh_token !== 'string' || !payload.refresh_token) {
       throw new UnauthorizedException(
-        'Google did not return offline mailbox access. Revoke Suppline in your Google Account and connect again.',
+        'Google did not return offline mailbox access. Revoke Chanda in your Google Account and connect again.',
       );
     }
     return {
@@ -137,7 +137,7 @@ export class GmailApiService implements GmailApi {
         },
       );
     } catch {
-      // Local credential deletion still disconnects Suppline. The UI explains
+      // Local credential deletion still disconnects Chanda. The UI explains
       // how to revoke access in the Google Account security page if needed.
     }
   }

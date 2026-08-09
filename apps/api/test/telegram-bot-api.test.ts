@@ -9,10 +9,10 @@ describe('TelegramBotApiService', () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       const result = url.endsWith('/getMe')
         ? {
-            first_name: 'Suppline Help',
+            first_name: 'Chanda Help',
             id: 123,
             is_bot: true,
-            username: 'suppline_help_bot',
+            username: 'chanda_help_bot',
           }
         : url.endsWith('/sendMessage')
           ? { message_id: 44 }

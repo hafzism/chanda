@@ -118,6 +118,7 @@ describe('GmailService', () => {
       connectionId: 'connection-1',
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ refreshToken: 'refresh' }),
+        { kind: 'gmail', workspaceId: 'workspace-1' },
       ),
       settings: {
         emailAddress: 'support@example.com',
@@ -153,6 +154,7 @@ describe('GmailService', () => {
       connectionId: 'connection-1',
       encryptedCredentials: cipher.encrypt(
         JSON.stringify({ refreshToken: 'refresh' }),
+        { kind: 'gmail', workspaceId: 'workspace-1' },
       ),
       settings: {
         emailAddress: 'support@example.com',

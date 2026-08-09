@@ -137,7 +137,7 @@ export class DrizzleGmailRepository implements GmailRepository {
         .onConflictDoUpdate({
           set: {
             encryptedCredentials: input.encryptedCredentials,
-            encryptionKeyVersion: 1,
+            encryptionKeyVersion: 2,
             updatedAt: new Date(),
             webhookSecretHash: null,
             workspaceId: input.workspaceId,
@@ -480,7 +480,12 @@ export class DrizzleGmailRepository implements GmailRepository {
       await transaction
         .update(channelConnections)
         .set({ lastInboundAt: now, updatedAt: now })
-        .where(eq(channelConnections.id, connection.id));
+        .where(
+          and(
+            eq(channelConnections.id, connection.id),
+            eq(channelConnections.workspaceId, connection.workspaceId),
+          ),
+        );
       await transaction
         .update(conversations)
         .set({
