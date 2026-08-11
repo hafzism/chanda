@@ -7,6 +7,26 @@ import { ConfigService } from '@nestjs/config';
 import Stripe from 'stripe';
 
 import { BillingRepository } from './billing.repository';
+import type { BillingSubscriptionStatus } from './billing.types';
+
+const BILLING_STATUS_BY_STRIPE_VALUE: Readonly<
+  Record<string, BillingSubscriptionStatus>
+> = {
+  active: 'active',
+  canceled: 'canceled',
+  incomplete: 'incomplete',
+  incomplete_expired: 'incomplete_expired',
+  past_due: 'past_due',
+  paused: 'paused',
+  trialing: 'trialing',
+  unpaid: 'unpaid',
+};
+
+function normalizeSubscriptionStatus(
+  status: Stripe.Subscription.Status,
+): BillingSubscriptionStatus {
+  return BILLING_STATUS_BY_STRIPE_VALUE[status] ?? 'unpaid';
+}
 import type { BillingSummary } from './billing.types';
 
 @Injectable()
@@ -118,7 +138,7 @@ export class BillingService {
       eventId: event.id,
       eventType: event.type,
       priceId: item?.price.id ?? null,
-      status: subscription.status,
+      status: normalizeSubscriptionStatus(subscription.status),
       subscriptionId: subscription.id,
       workspaceId: account.workspaceId,
     });

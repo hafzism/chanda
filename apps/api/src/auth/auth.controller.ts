@@ -10,6 +10,7 @@ import {
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { CookieOptions, Request, Response } from 'express';
 
 import { SESSION_COOKIE_NAME, SESSION_LIFETIME_MS } from './auth.constants';
@@ -31,7 +32,7 @@ function requireSessionToken(request: Request): string {
   const token = readCookie(request.headers.cookie, SESSION_COOKIE_NAME);
 
   if (!token) {
-    throw new UnauthorizedException('A Suppline session is required.');
+    throw new UnauthorizedException('A Chanda session is required.');
   }
 
   return token;
@@ -43,6 +44,7 @@ export class AuthController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   async create(
     @Body() body: CreateSessionDto,
     @Req() request: Request,

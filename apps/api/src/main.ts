@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { StructuredLogger } from '@suppline/observability';
 import type { NextFunction, Request, Response } from 'express';
+import helmet from 'helmet';
 
 import { AppModule } from './app.module';
 
@@ -17,13 +18,22 @@ async function bootstrap(): Promise<void> {
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
   app.enableShutdownHooks();
+  app.use(
+    helmet({
+      crossOriginOpenerPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      strictTransportSecurity:
+        process.env.NODE_ENV === 'production'
+          ? { includeSubDomains: true, maxAge: 31_536_000 }
+          : false,
+    }),
+  );
   app.use((_request: Request, response: Response, next: NextFunction) => {
+    response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.setHeader('X-Frame-Options', 'DENY');
     response.setHeader(
       'Permissions-Policy',
-      'camera=(), geolocation=(), microphone=()',
+      'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
     );
     next();
   });

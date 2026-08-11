@@ -18,7 +18,11 @@ function truncate(value: string): string {
   const redacted = value
     .replace(/(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, '$1[REDACTED]')
     .replace(/(AIza)[0-9A-Za-z_-]{20,}/g, '$1[REDACTED]')
+    .replace(/\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,}\b/g, 'sk-[REDACTED]')
     .replace(/(sk_(?:live|test)_|whsec_)[0-9A-Za-z]+/g, '$1[REDACTED]')
+    .replace(/\bEAA[A-Za-z0-9_-]{20,}\b/g, 'EAA[REDACTED]')
+    .replace(/\b\d{6,12}:[A-Za-z0-9_-]{20,}\b/g, '[TELEGRAM_TOKEN_REDACTED]')
+    .replace(/\b1\/\/[A-Za-z0-9_-]{20,}\b/g, '1//[REDACTED]')
     .replace(
       /([?&](?:access_token|api_key|key|secret|token)=)[^&#\s]+/gi,
       '$1[REDACTED]',

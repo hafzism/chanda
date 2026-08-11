@@ -61,7 +61,7 @@ describe('AuthService', () => {
     service = new AuthService(identityVerifier, repository);
   });
 
-  it('exchanges a verified Firebase identity for a hashed Suppline session', async () => {
+  it('exchanges a verified Firebase identity for a hashed application session', async () => {
     const issuedSession = await service.exchangeIdToken(
       'valid-firebase-token',
       'test-browser',

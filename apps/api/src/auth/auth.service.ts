@@ -57,7 +57,7 @@ export class AuthService {
     );
 
     if (!session) {
-      throw new UnauthorizedException('The Suppline session is not valid.');
+      throw new UnauthorizedException('The Chanda session is not valid.');
     }
 
     return session;

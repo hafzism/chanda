@@ -20,6 +20,34 @@ function setup(values: Record<string, string> = {}) {
   };
 }
 
+function subscriptionWebhookPayload(status: string): string {
+  return JSON.stringify({
+    id: `evt_${status}`,
+    object: 'event',
+    api_version: '2026-06-30.basil',
+    created: 1785542400,
+    data: {
+      object: {
+        id: 'sub_1',
+        object: 'subscription',
+        cancel_at_period_end: false,
+        customer: 'cus_1',
+        metadata: { workspaceId: 'workspace-1' },
+        status,
+        items: {
+          data: [
+            { current_period_end: 1788220800, price: { id: 'price_pro' } },
+          ],
+        },
+      },
+    },
+    livemode: false,
+    pending_webhooks: 1,
+    request: null,
+    type: 'customer.subscription.updated',
+  });
+}
+
 describe('BillingService', () => {
   it('derives free and Pro entitlement only from persisted subscription state', async () => {
     const { repository, service } = setup();
@@ -48,31 +76,7 @@ describe('BillingService', () => {
       STRIPE_WEBHOOK_SECRET: secret,
     });
     repository.findByCustomer.mockResolvedValue({ workspaceId: 'workspace-1' });
-    const payload = JSON.stringify({
-      id: 'evt_1',
-      object: 'event',
-      api_version: '2026-06-30.basil',
-      created: 1785542400,
-      data: {
-        object: {
-          id: 'sub_1',
-          object: 'subscription',
-          cancel_at_period_end: false,
-          customer: 'cus_1',
-          metadata: { workspaceId: 'workspace-1' },
-          status: 'active',
-          items: {
-            data: [
-              { current_period_end: 1788220800, price: { id: 'price_pro' } },
-            ],
-          },
-        },
-      },
-      livemode: false,
-      pending_webhooks: 1,
-      request: null,
-      type: 'customer.subscription.updated',
-    });
+    const payload = subscriptionWebhookPayload('active');
     const signature = Stripe.webhooks.generateTestHeaderString({
       payload,
       secret,
@@ -82,10 +86,30 @@ describe('BillingService', () => {
     ).resolves.toEqual({ received: true });
     expect(repository.applySubscription).toHaveBeenCalledWith(
       expect.objectContaining({
-        eventId: 'evt_1',
+        eventId: 'evt_active',
         status: 'active',
         workspaceId: 'workspace-1',
       }),
+    );
+  });
+
+  it('fails closed when Stripe introduces an unknown subscription status', async () => {
+    const secret = 'whsec_test_secret';
+    const { repository, service } = setup({
+      STRIPE_SECRET_KEY: 'sk_test_example',
+      STRIPE_WEBHOOK_SECRET: secret,
+    });
+    repository.findByCustomer.mockResolvedValue({ workspaceId: 'workspace-1' });
+    const payload = subscriptionWebhookPayload('future_status');
+    const signature = Stripe.webhooks.generateTestHeaderString({
+      payload,
+      secret,
+    });
+
+    await service.handleWebhook(Buffer.from(payload), signature);
+
+    expect(repository.applySubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'unpaid' }),
     );
   });
 });
