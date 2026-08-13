@@ -37,40 +37,15 @@ export interface InvitationPreview {
   workspaceSlug: string;
 }
 
-async function responseError(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as { message?: string | string[] };
-    return Array.isArray(body.message)
-      ? body.message.join(' ')
-      : (body.message ?? 'Unable to complete the request.');
-  } catch {
-    return 'Unable to complete the request.';
-  }
-}
-
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-  if (init?.body) headers.set('content-type', 'application/json');
-  const response = await fetch(url, {
-    ...init,
-    cache: 'no-store',
-    headers,
-  });
-  if (!response.ok) throw new Error(await responseError(response));
-  if (response.status === 204) return undefined as T;
-  const text = await response.text();
-  return (text ? JSON.parse(text) : undefined) as T;
-}
-
 export function listTeam(workspaceId: string): Promise<TeamOverview> {
-  return request(`/api/v1/workspaces/${workspaceId}/team`);
+  return apiRequest(`/workspaces/${workspaceId}/team`);
 }
 
 export function createInvitation(
   workspaceId: string,
   input: { email: string; role: Exclude<WorkspaceRole, 'owner'> },
 ): Promise<CreatedInvitation> {
-  return request(`/api/v1/workspaces/${workspaceId}/team/invitations`, {
+  return apiRequest(`/workspaces/${workspaceId}/team/invitations`, {
     body: JSON.stringify(input),
     method: 'POST',
   });
@@ -80,8 +55,8 @@ export function revokeInvitation(
   workspaceId: string,
   invitationId: string,
 ): Promise<void> {
-  return request(
-    `/api/v1/workspaces/${workspaceId}/team/invitations/${invitationId}`,
+  return apiRequest(
+    `/workspaces/${workspaceId}/team/invitations/${invitationId}`,
     { method: 'DELETE' },
   );
 }
@@ -91,7 +66,7 @@ export function updateMemberRole(
   userId: string,
   role: Exclude<WorkspaceRole, 'owner'>,
 ): Promise<TeamMember> {
-  return request(`/api/v1/workspaces/${workspaceId}/team/members/${userId}`, {
+  return apiRequest(`/workspaces/${workspaceId}/team/members/${userId}`, {
     body: JSON.stringify({ role }),
     method: 'PATCH',
   });
@@ -101,17 +76,18 @@ export function removeMember(
   workspaceId: string,
   userId: string,
 ): Promise<void> {
-  return request(`/api/v1/workspaces/${workspaceId}/team/members/${userId}`, {
+  return apiRequest(`/workspaces/${workspaceId}/team/members/${userId}`, {
     method: 'DELETE',
   });
 }
 
 export function previewInvitation(token: string): Promise<InvitationPreview> {
-  return request(`/api/v1/invitations/${encodeURIComponent(token)}`);
+  return apiRequest(`/invitations/${encodeURIComponent(token)}`);
 }
 
 export function acceptInvitation(token: string): Promise<{ id: string }> {
-  return request(`/api/v1/invitations/${encodeURIComponent(token)}/accept`, {
+  return apiRequest(`/invitations/${encodeURIComponent(token)}/accept`, {
     method: 'POST',
   });
 }
+import { apiRequest } from './api-client';

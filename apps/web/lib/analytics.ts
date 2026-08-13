@@ -23,17 +23,8 @@ export interface AnalyticsOverview {
 }
 
 export async function getAnalyticsOverview(workspaceId: string) {
-  const response = await fetch(
-    `/api/v1/workspaces/${workspaceId}/analytics/overview`,
+  return apiRequest<AnalyticsOverview>(
+    `/workspaces/${workspaceId}/analytics/overview`,
   );
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      message?: string | string[];
-    } | null;
-    const message = Array.isArray(body?.message)
-      ? body.message[0]
-      : body?.message;
-    throw new Error(message ?? 'Analytics could not be loaded.');
-  }
-  return response.json() as Promise<AnalyticsOverview>;
 }
+import { apiRequest } from './api-client';

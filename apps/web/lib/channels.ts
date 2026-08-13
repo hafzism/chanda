@@ -58,73 +58,54 @@ export interface MetaMessagingChannel {
   webhookVerifiedAt: string | null;
 }
 
-async function channelRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`/api/v1${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as {
-      message?: string | string[];
-    } | null;
-    const message = Array.isArray(body?.message)
-      ? body.message[0]
-      : body?.message;
-    throw new Error(message ?? 'The channel request could not be completed.');
-  }
-  if (response.status === 204) return undefined as T;
-  return response.json() as Promise<T>;
-}
-
 export function getTelegramChannel(workspaceId: string) {
-  return channelRequest<TelegramChannel>(
+  return apiRequest<TelegramChannel>(
     `/workspaces/${workspaceId}/channels/telegram`,
     { cache: 'no-store' },
   );
 }
 
 export function connectTelegramChannel(workspaceId: string, botToken: string) {
-  return channelRequest<TelegramChannel>(
+  return apiRequest<TelegramChannel>(
     `/workspaces/${workspaceId}/channels/telegram`,
     { body: JSON.stringify({ botToken }), method: 'POST' },
   );
 }
 
 export function disconnectTelegramChannel(workspaceId: string) {
-  return channelRequest<void>(`/workspaces/${workspaceId}/channels/telegram`, {
+  return apiRequest<void>(`/workspaces/${workspaceId}/channels/telegram`, {
     method: 'DELETE',
   });
 }
 
 export function getGmailChannel(workspaceId: string) {
-  return channelRequest<GmailChannel>(
-    `/workspaces/${workspaceId}/channels/gmail`,
-    { cache: 'no-store' },
-  );
+  return apiRequest<GmailChannel>(`/workspaces/${workspaceId}/channels/gmail`, {
+    cache: 'no-store',
+  });
 }
 
 export function beginGmailOAuth(workspaceId: string) {
-  return channelRequest<{ authorizationUrl: string }>(
+  return apiRequest<{ authorizationUrl: string }>(
     `/workspaces/${workspaceId}/channels/gmail/oauth`,
     { method: 'POST' },
   );
 }
 
 export function syncGmailChannel(workspaceId: string) {
-  return channelRequest<{ imported: number; syncedAt: string }>(
+  return apiRequest<{ imported: number; syncedAt: string }>(
     `/workspaces/${workspaceId}/channels/gmail/sync`,
     { method: 'POST' },
   );
 }
 
 export function disconnectGmailChannel(workspaceId: string) {
-  return channelRequest<void>(`/workspaces/${workspaceId}/channels/gmail`, {
+  return apiRequest<void>(`/workspaces/${workspaceId}/channels/gmail`, {
     method: 'DELETE',
   });
 }
 
 export function getWhatsAppChannel(workspaceId: string) {
-  return channelRequest<WhatsAppChannel>(
+  return apiRequest<WhatsAppChannel>(
     `/workspaces/${workspaceId}/channels/whatsapp`,
     { cache: 'no-store' },
   );
@@ -134,14 +115,14 @@ export function connectWhatsAppChannel(
   workspaceId: string,
   input: { accessToken: string; appSecret: string; phoneNumberId: string },
 ) {
-  return channelRequest<WhatsAppChannel>(
+  return apiRequest<WhatsAppChannel>(
     `/workspaces/${workspaceId}/channels/whatsapp`,
     { body: JSON.stringify(input), method: 'POST' },
   );
 }
 
 export function disconnectWhatsAppChannel(workspaceId: string) {
-  return channelRequest<void>(`/workspaces/${workspaceId}/channels/whatsapp`, {
+  return apiRequest<void>(`/workspaces/${workspaceId}/channels/whatsapp`, {
     method: 'DELETE',
   });
 }
@@ -150,7 +131,7 @@ export function getMetaMessagingChannel(
   workspaceId: string,
   kind: MetaChannelKind,
 ) {
-  return channelRequest<MetaMessagingChannel>(
+  return apiRequest<MetaMessagingChannel>(
     `/workspaces/${workspaceId}/channels/meta/${kind}`,
     { cache: 'no-store' },
   );
@@ -161,7 +142,7 @@ export function connectMetaMessagingChannel(
   kind: MetaChannelKind,
   input: { assetId: string; appSecret: string; pageAccessToken: string },
 ) {
-  return channelRequest<MetaMessagingChannel>(
+  return apiRequest<MetaMessagingChannel>(
     `/workspaces/${workspaceId}/channels/meta/${kind}`,
     { body: JSON.stringify(input), method: 'POST' },
   );
@@ -171,14 +152,13 @@ export function disconnectMetaMessagingChannel(
   workspaceId: string,
   kind: MetaChannelKind,
 ) {
-  return channelRequest<void>(
-    `/workspaces/${workspaceId}/channels/meta/${kind}`,
-    { method: 'DELETE' },
-  );
+  return apiRequest<void>(`/workspaces/${workspaceId}/channels/meta/${kind}`, {
+    method: 'DELETE',
+  });
 }
 
 export function getWebChannel(workspaceId: string) {
-  return channelRequest<WebChannel>(`/workspaces/${workspaceId}/channels/web`, {
+  return apiRequest<WebChannel>(`/workspaces/${workspaceId}/channels/web`, {
     cache: 'no-store',
   });
 }
@@ -187,7 +167,7 @@ export function updateWebChannelOrigins(
   workspaceId: string,
   origins: string[],
 ) {
-  return channelRequest<WebChannel>(
+  return apiRequest<WebChannel>(
     `/workspaces/${workspaceId}/channels/web/origins`,
     { body: JSON.stringify({ origins }), method: 'PATCH' },
   );
@@ -221,3 +201,4 @@ export function createWidgetEmbedCode(input: {
 }): string {
   return `<script src="${input.scriptOrigin}/widget.js" data-api-origin="${input.apiOrigin}" data-public-key="${input.publicKey}" defer></script>`;
 }
+import { apiRequest } from './api-client';
