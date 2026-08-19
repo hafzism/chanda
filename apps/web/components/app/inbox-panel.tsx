@@ -519,7 +519,7 @@ function formatStatus(value: string): string {
 
 function formatAuthor(value: string): string {
   return value === 'ai'
-    ? 'Suppline AI'
+    ? 'Chanda AI'
     : value[0]?.toUpperCase() + value.slice(1);
 }
 

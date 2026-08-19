@@ -20,6 +20,7 @@ import {
   getTelegramChannel,
   type TelegramChannel,
 } from '../../lib/channels';
+import { ChannelSetupPrompt } from './channel-setup-prompt';
 
 export function TelegramChannelCard({
   canManage,
@@ -115,7 +116,7 @@ export function TelegramChannelCard({
   }
 
   const connected = channel?.status === 'active' && channel.botUsername;
-  const setupVisible = canManage && (!connected || showSetup);
+  const setupVisible = canManage && showSetup;
 
   return (
     <article className="channel-card telegram-card">
@@ -139,7 +140,7 @@ export function TelegramChannelCard({
             <div>
               <strong>{channel.botFirstName}</strong>
               <p>
-                Private text messages sent to this bot become Suppline inbox
+                Private text messages sent to this bot become Chanda inbox
                 tickets. Agent replies are delivered back to the same chat.
               </p>
             </div>
@@ -223,7 +224,7 @@ export function TelegramChannelCard({
                 <span>3</span>
                 <p>
                   Copy the HTTP API token BotFather returns and paste it below.
-                  Suppline verifies the bot before saving it.
+                  Chanda verifies the bot before saving it.
                 </p>
               </div>
               <div>
@@ -271,22 +272,27 @@ export function TelegramChannelCard({
                 >
                   {busy ? 'Verifying bot…' : 'Verify and connect'}
                 </button>
-                {connected && (
-                  <button
-                    className="button secondary-button"
-                    disabled={busy}
-                    onClick={() => {
-                      setToken('');
-                      setShowSetup(false);
-                    }}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <button
+                  className="button secondary-button"
+                  disabled={busy}
+                  onClick={() => {
+                    setToken('');
+                    setShowSetup(false);
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
+        ) : canManage ? (
+          <ChannelSetupPrompt
+            actionLabel="Set up Telegram"
+            description="Connect a BotFather token to receive private customer messages."
+            onAction={() => setShowSetup(true)}
+            title="Connect Telegram"
+          />
         ) : (
           <div className="telegram-viewer-empty">
             <ShieldCheck size={22} />

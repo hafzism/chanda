@@ -204,9 +204,9 @@ export function KnowledgeLibrary({
           <span>
             <BookOpen size={25} />
           </span>
-          <h2>Give Suppline approved answers to work from</h2>
+          <h2>Give Chanda approved answers to work from</h2>
           <p>
-            Add a policy or help article. Suppline stores the original, indexes
+            Add a policy or help article. Chanda stores the original, indexes
             exact evidence, and cites it when preparing support replies.
           </p>
           {canManage && (
@@ -428,7 +428,7 @@ function RetrievalTester({ workspaceId }: { workspaceId: string }) {
       <header>
         <div>
           <span>Retrieval check</span>
-          <h2 id="retrieval-tester-title">Test what Suppline can find</h2>
+          <h2 id="retrieval-tester-title">Test what Chanda can find</h2>
         </div>
         {response && (
           <span className="retrieval-mode">

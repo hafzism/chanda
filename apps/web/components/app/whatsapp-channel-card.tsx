@@ -20,6 +20,7 @@ import {
   getWhatsAppChannel,
   type WhatsAppChannel,
 } from '../../lib/channels';
+import { ChannelSetupPrompt } from './channel-setup-prompt';
 
 export function WhatsAppChannelCard({
   canManage,
@@ -163,7 +164,7 @@ export function WhatsAppChannelCard({
                   {channel?.displayPhoneNumber} · {channel?.verifiedName}
                 </strong>
                 <p>
-                  Private text messages become inbox tickets. Suppline accepts
+                  Private text messages become inbox tickets. Chanda accepts
                   Meta-signed webhooks and tracks sent, delivered, read, and
                   failed acknowledgements.
                 </p>
@@ -230,7 +231,7 @@ export function WhatsAppChannelCard({
                 <p>
                   Free-form replies are available for 24 hours after the
                   customer's latest message. After that, WhatsApp requires an
-                  approved template; Suppline blocks the reply with an exact
+                  approved template; Chanda blocks the reply with an exact
                   explanation.
                 </p>
               </div>
@@ -289,7 +290,7 @@ export function WhatsAppChannelCard({
               )}
             </div>
           </div>
-        ) : canManage ? (
+        ) : canManage && showCredentials ? (
           <div className="whatsapp-setup">
             <div className="whatsapp-guide">
               <div className="whatsapp-guide-heading">
@@ -379,7 +380,7 @@ export function WhatsAppChannelCard({
                 </button>
               </div>
               <p>
-                Suppline verifies the phone through Meta before encrypting these
+                Chanda verifies the phone through Meta before encrypting these
                 credentials. They are never returned by the API.
               </p>
               <div className="whatsapp-actions">
@@ -395,19 +396,24 @@ export function WhatsAppChannelCard({
                 >
                   {busy ? 'Verifying with Meta…' : 'Verify credentials'}
                 </button>
-                {connected && (
-                  <button
-                    className="button secondary-button"
-                    disabled={busy}
-                    onClick={() => setShowCredentials(false)}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <button
+                  className="button secondary-button"
+                  disabled={busy}
+                  onClick={() => setShowCredentials(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
+        ) : canManage ? (
+          <ChannelSetupPrompt
+            actionLabel="Set up WhatsApp"
+            description="Connect Meta test-sender or business-phone credentials."
+            onAction={() => setShowCredentials(true)}
+            title="Connect WhatsApp"
+          />
         ) : (
           <div className="telegram-viewer-empty">
             <ShieldCheck size={22} />

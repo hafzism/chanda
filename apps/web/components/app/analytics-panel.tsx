@@ -214,7 +214,7 @@ export function AnalyticsPanel({
               </div>
             </div>
             <p>
-              These rates describe draft workflow only. Suppline does not
+              These rates describe draft workflow only. Chanda does not
               auto-send AI replies in the current policy.
             </p>
           </article>

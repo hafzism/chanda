@@ -103,13 +103,16 @@ export function BillingPanel({
             : 'Your workspace is using the free plan.'}
         </p>
         {summary.currentPeriodEnd && (
-          <p className="billing-period">
-            {summary.cancelAtPeriodEnd
-              ? 'Access ends'
-              : 'Current period renews'}{' '}
-            {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
-              new Date(summary.currentPeriodEnd),
-            )}
+          <div className="billing-period">
+            <p>
+              {summary.cancelAtPeriodEnd
+                ? 'Access ends'
+                : 'Current period renews'}{' '}
+              {new Intl.DateTimeFormat(undefined, {
+                dateStyle: 'medium',
+              }).format(new Date(summary.currentPeriodEnd))}
+              .
+            </p>
             {summary.graceEndsAt && summary.status === 'past_due' && (
               <p className="billing-notice neutral">
                 Payment needs attention. Pro remains available until{' '}
@@ -119,8 +122,7 @@ export function BillingPanel({
                 .
               </p>
             )}
-            .
-          </p>
+          </div>
         )}
         {!isOwner && (
           <p className="billing-permission">
@@ -169,8 +171,8 @@ export function BillingPanel({
           </li>
         </ul>
         <p className="billing-fineprint">
-          Stripe securely hosts checkout and payment management. Suppline does
-          not collect or store card details.
+          Stripe securely hosts checkout and payment management. Chanda does not
+          collect or store card details.
         </p>
       </article>
     </section>

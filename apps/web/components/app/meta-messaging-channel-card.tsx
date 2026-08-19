@@ -22,6 +22,7 @@ import {
   type MetaChannelKind,
   type MetaMessagingChannel,
 } from '../../lib/channels';
+import { ChannelSetupPrompt } from './channel-setup-prompt';
 
 export function MetaMessagingChannelCard({
   canManage,
@@ -257,7 +258,7 @@ export function MetaMessagingChannelCard({
               )}
             </div>
           </div>
-        ) : canManage ? (
+        ) : canManage && showCredentials ? (
           <div className="meta-setup">
             <div className="meta-guide">
               <strong>{config.setupTitle}</strong>
@@ -330,19 +331,24 @@ export function MetaMessagingChannelCard({
                 >
                   {busy ? 'Verifying…' : 'Verify credentials'}
                 </button>
-                {connected && (
-                  <button
-                    className="button secondary-button"
-                    disabled={busy}
-                    onClick={() => setShowCredentials(false)}
-                    type="button"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <button
+                  className="button secondary-button"
+                  disabled={busy}
+                  onClick={() => setShowCredentials(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
+        ) : canManage ? (
+          <ChannelSetupPrompt
+            actionLabel={`Set up ${config.label}`}
+            description={config.compactDescription}
+            onAction={() => setShowCredentials(true)}
+            title={`Connect ${config.label}`}
+          />
         ) : (
           <div className="meta-viewer-empty">
             <ShieldCheck size={20} />
@@ -396,6 +402,8 @@ function MetaWebhookValue({
 const channelConfig = {
   facebook: {
     assetLabel: 'Facebook Page ID',
+    compactDescription:
+      'Connect a Page and receive customer messages in the shared inbox.',
     icon: MessagesSquare,
     label: 'Facebook Messenger',
     setupDescription:
@@ -412,6 +420,8 @@ const channelConfig = {
   },
   instagram: {
     assetLabel: 'Instagram Professional account ID',
+    compactDescription:
+      'Connect a Professional account and receive customer messages in the inbox.',
     icon: Camera,
     label: 'Instagram',
     setupDescription:

@@ -18,6 +18,7 @@ import {
   type GmailChannel,
   syncGmailChannel,
 } from '../../lib/channels';
+import { ChannelSetupPrompt } from './channel-setup-prompt';
 
 export function GmailChannelCard({
   canManage,
@@ -31,6 +32,7 @@ export function GmailChannelCard({
   const [channel, setChannel] = useState<GmailChannel>();
   const [busy, setBusy] = useState<'connect' | 'disconnect' | 'sync'>();
   const [disconnectArmed, setDisconnectArmed] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
@@ -179,9 +181,9 @@ export function GmailChannelCard({
               <div>
                 <strong>Mailbox synchronization is manual</strong>
                 <p>
-                  Inbound Gmail threads become Suppline tickets. Replies from
-                  the Inbox are sent from this mailbox and remain in the
-                  original thread.
+                  Inbound Gmail threads become Chanda tickets. Replies from the
+                  Inbox are sent from this mailbox and remain in the original
+                  thread.
                 </p>
               </div>
               {channel?.status === 'error' && (
@@ -264,7 +266,7 @@ export function GmailChannelCard({
               )}
             </div>
           </div>
-        ) : canManage ? (
+        ) : canManage && showSetup ? (
           <div className="gmail-setup">
             {!channel?.oauthConfigured ? (
               <>
@@ -322,6 +324,13 @@ export function GmailChannelCard({
                 >
                   Recheck configuration
                 </button>
+                <button
+                  className="button secondary-button gmail-setup-cancel"
+                  onClick={() => setShowSetup(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
               </>
             ) : (
               <div className="gmail-ready-to-connect">
@@ -330,9 +339,8 @@ export function GmailChannelCard({
                   <strong>Connect a support mailbox</strong>
                   <p>
                     Google will ask for permission to read Gmail and send
-                    replies. Suppline stores only an encrypted refresh
-                    credential and will not import mail until you run the first
-                    sync.
+                    replies. Chanda stores only an encrypted refresh credential
+                    and will not import mail until you run the first sync.
                   </p>
                   <button
                     className="button primary-button"
@@ -345,10 +353,25 @@ export function GmailChannelCard({
                       ? 'Opening Google…'
                       : 'Connect with Google'}
                   </button>
+                  <button
+                    className="button secondary-button"
+                    disabled={Boolean(busy)}
+                    onClick={() => setShowSetup(false)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             )}
           </div>
+        ) : canManage ? (
+          <ChannelSetupPrompt
+            actionLabel="Set up Gmail"
+            description="Authorize a support mailbox. Messages import only when you run sync."
+            onAction={() => setShowSetup(true)}
+            title="Connect Gmail"
+          />
         ) : (
           <div className="telegram-viewer-empty">
             <ShieldCheck size={22} />

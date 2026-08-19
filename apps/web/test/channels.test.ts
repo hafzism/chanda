@@ -56,7 +56,7 @@ describe('createWidgetEmbedCode', () => {
 describe('Telegram channel operations', () => {
   it('sends the write-only bot token only during connection', async () => {
     const connected = {
-      botUsername: 'suppline_help_bot',
+      botUsername: 'chanda_help_bot',
       id: 'connection-1',
       status: 'active',
     };

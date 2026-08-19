@@ -218,7 +218,7 @@ export function TeamPanel({
               <div>
                 <strong>Copy this link now</strong>
                 <small>
-                  For security, Suppline cannot show the raw token again after
+                  For security, Chanda cannot show the raw token again after
                   this page reloads.
                 </small>
               </div>
