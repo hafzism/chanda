@@ -16,7 +16,7 @@ const assurances = [
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <main className="auth-page">
-      <section className="auth-story" aria-label="Suppline AI overview">
+      <section className="auth-story" aria-label="Chanda AI overview">
         <Brand />
         <div className="auth-story-copy">
           <p className="eyebrow">Support operations, composed</p>

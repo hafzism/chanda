@@ -8,7 +8,7 @@ import { Brand } from '../brand';
 import {
   createWorkspace,
   listWorkspaces,
-  readSupplineSession,
+  readSession,
 } from '../../lib/session';
 
 function toSlug(value: string): string {
@@ -32,7 +32,7 @@ export function WorkspaceForm() {
   useEffect(() => {
     void (async () => {
       try {
-        const session = await readSupplineSession();
+        const session = await readSession();
         if (!session) {
           router.replace('/sign-in');
           return;
@@ -135,9 +135,8 @@ export function WorkspaceForm() {
               />
             </label>
             <label>
-              Workspace URL
+              Workspace slug
               <span className="slug-input">
-                <span>suppline.ai/</span>
                 <input
                   maxLength={48}
                   minLength={2}

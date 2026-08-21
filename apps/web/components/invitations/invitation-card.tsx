@@ -16,7 +16,8 @@ import {
   previewInvitation,
   type InvitationPreview,
 } from '../../lib/team';
-import { readSupplineSession } from '../../lib/session';
+import { saveLastWorkspaceId } from '../../lib/product';
+import { readSession } from '../../lib/session';
 
 export function InvitationCard({ token }: { token: string }) {
   const router = useRouter();
@@ -29,7 +30,7 @@ export function InvitationCard({ token }: { token: string }) {
   useEffect(() => {
     void (async () => {
       try {
-        const session = await readSupplineSession();
+        const session = await readSession();
         if (!session) {
           setNeedsSignIn(true);
           return;
@@ -50,7 +51,7 @@ export function InvitationCard({ token }: { token: string }) {
     setError(undefined);
     try {
       const workspace = await acceptInvitation(token);
-      window.localStorage.setItem('suppline:last-workspace-id', workspace.id);
+      saveLastWorkspaceId(workspace.id);
       router.replace('/app');
       router.refresh();
     } catch (caught: unknown) {
@@ -81,8 +82,7 @@ export function InvitationCard({ token }: { token: string }) {
         <p className="eyebrow">Team invitation</p>
         <h1>Sign in to continue.</h1>
         <p>
-          Suppline verifies the signed-in email before granting workspace
-          access.
+          Chanda verifies the signed-in email before granting workspace access.
         </p>
         <div className="invitation-actions">
           <Link
@@ -112,7 +112,7 @@ export function InvitationCard({ token }: { token: string }) {
         <h1>This link can’t be accepted.</h1>
         <p>{error}</p>
         <Link className="button secondary-button" href="/app">
-          Return to Suppline
+          Return to Chanda
         </Link>
       </div>
     );

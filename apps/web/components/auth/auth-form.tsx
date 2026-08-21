@@ -14,7 +14,7 @@ import { useRouter } from 'next/navigation';
 import { type FormEvent, useEffect, useState } from 'react';
 
 import { firebaseAuth } from '../../lib/firebase';
-import { createSupplineSession } from '../../lib/session';
+import { createSession } from '../../lib/session';
 
 interface AuthFormProps {
   mode: 'sign-in' | 'sign-up';
@@ -44,7 +44,7 @@ function friendlyAuthError(error: unknown): string {
     return 'Sign-in is temporarily unavailable. Please contact support.';
   }
 
-  return error.message;
+  return 'We could not complete that request. Please try again.';
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
@@ -66,10 +66,8 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }, []);
 
-  async function completeSignIn(
-    user: Parameters<typeof createSupplineSession>[0],
-  ) {
-    await createSupplineSession(user);
+  async function completeSignIn(user: Parameters<typeof createSession>[0]) {
+    await createSession(user);
     router.replace(nextPath);
     router.refresh();
   }
@@ -134,7 +132,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           {isSignUp ? 'Create your workspace' : 'Welcome back'}
         </p>
         <h1>
-          {isSignUp ? 'Start supporting with clarity.' : 'Sign in to Suppline.'}
+          {isSignUp ? 'Start supporting with clarity.' : 'Sign in to Chanda.'}
         </h1>
         <p>
           {isSignUp
@@ -199,7 +197,10 @@ export function AuthForm({ mode }: AuthFormProps) {
         </label>
 
         {status && (
-          <p className={`form-status ${status.kind}`} role="status">
+          <p
+            className={`form-status ${status.kind}`}
+            role={status.kind === 'error' ? 'alert' : 'status'}
+          >
             {status.message}
           </p>
         )}
@@ -211,7 +212,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       </form>
 
       <p className="auth-switch">
-        {isSignUp ? 'Already have an account?' : 'New to Suppline AI?'}{' '}
+        {isSignUp ? 'Already have an account?' : 'New to Chanda AI?'}{' '}
         <Link
           href={`${isSignUp ? '/sign-in' : '/sign-up'}${nextPath === '/app' ? '' : `?next=${encodeURIComponent(nextPath)}`}`}
         >
