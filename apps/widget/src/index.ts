@@ -1,19 +1,21 @@
-import { SupplineWidgetElement } from './widget-element';
+import { ChandaWidgetElement } from './widget-element';
 
 export const WIDGET_PACKAGE_NAME = '@suppline/widget';
 
-export interface SupplineWidgetOptions {
+export interface ChandaWidgetOptions {
   apiOrigin?: string;
+  logoUrl?: string;
   position?: 'left' | 'right';
   publicKey: string;
   title?: string;
 }
 
-export function mount(options: SupplineWidgetOptions): HTMLElement {
+export function mount(options: ChandaWidgetOptions): HTMLElement {
   registerElement();
-  const widget = document.createElement('suppline-widget');
+  const widget = document.createElement('chanda-widget');
   widget.setAttribute('public-key', options.publicKey);
   if (options.apiOrigin) widget.setAttribute('api-origin', options.apiOrigin);
+  if (options.logoUrl) widget.setAttribute('logo-url', options.logoUrl);
   if (options.position) widget.setAttribute('position', options.position);
   if (options.title) widget.setAttribute('title', options.title);
   document.body.append(widget);
@@ -21,12 +23,12 @@ export function mount(options: SupplineWidgetOptions): HTMLElement {
 }
 
 function registerElement(): void {
-  if (!customElements.get('suppline-widget')) {
-    customElements.define('suppline-widget', SupplineWidgetElement);
+  if (!customElements.get('chanda-widget')) {
+    customElements.define('chanda-widget', ChandaWidgetElement);
   }
 }
 
-function scriptOptions(): SupplineWidgetOptions | null {
+function scriptOptions(): ChandaWidgetOptions | null {
   const script = document.currentScript;
   if (!(script instanceof HTMLScriptElement)) return null;
   const publicKey = script.dataset.publicKey ?? script.dataset.workspaceKey;
@@ -34,8 +36,12 @@ function scriptOptions(): SupplineWidgetOptions | null {
   const apiOrigin =
     script.dataset.apiOrigin ||
     (script.src ? new URL(script.src, window.location.href).origin : undefined);
+  const logoUrl = script.src
+    ? new URL('/brand/chanda-panda-logo.png', script.src).href
+    : undefined;
   return {
     ...(apiOrigin ? { apiOrigin } : {}),
+    ...(logoUrl ? { logoUrl } : {}),
     ...(script.dataset.position === 'left'
       ? { position: 'left' as const }
       : {}),

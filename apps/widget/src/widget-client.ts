@@ -26,6 +26,10 @@ export interface WidgetStorage {
 }
 
 export function sessionStorageKey(publicKey: string): string {
+  return `chanda:widget:${publicKey}:session`;
+}
+
+function legacySessionStorageKey(publicKey: string): string {
   return `suppline:widget:${publicKey}:session`;
 }
 
@@ -45,8 +49,9 @@ export function loadWidgetSession(
   storage: WidgetStorage,
 ): WidgetSession {
   try {
+    const current = storage.getItem(sessionStorageKey(publicKey));
     const saved = JSON.parse(
-      storage.getItem(sessionStorageKey(publicKey)) ?? 'null',
+      current ?? storage.getItem(legacySessionStorageKey(publicKey)) ?? 'null',
     ) as StoredSession | null;
     if (
       saved &&
@@ -55,12 +60,14 @@ export function loadWidgetSession(
       typeof saved.threadId === 'string' &&
       typeof saved.visitorId === 'string'
     ) {
-      return {
+      const session = {
         conversationToken: saved.conversationToken,
         hasConversation: saved.hasConversation === true,
         threadId: saved.threadId,
         visitorId: saved.visitorId,
       };
+      if (!current) saveWidgetSession(publicKey, storage, session);
+      return session;
     }
   } catch {
     // Unavailable or malformed browser storage falls through to a new session.

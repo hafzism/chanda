@@ -10,7 +10,7 @@ import {
 const POLL_INTERVAL_MS = 5_000;
 const fallbackStorageValues = new Map<string, string>();
 
-export class SupplineWidgetElement extends HTMLElement {
+export class ChandaWidgetElement extends HTMLElement {
   private api?: WidgetApiClient;
   private draftMessageId: string | undefined;
   private messages: WidgetMessage[] = [];
@@ -24,7 +24,7 @@ export class SupplineWidgetElement extends HTMLElement {
     const publicKey = this.getAttribute('public-key') ?? '';
     const apiOrigin = this.getAttribute('api-origin') ?? window.location.origin;
     if (!/^pub_[A-Za-z0-9_-]{24,64}$/.test(publicKey)) {
-      console.error('Suppline widget requires a valid public-key attribute.');
+      console.error('Chanda widget requires a valid public-key attribute.');
       return;
     }
 
@@ -34,6 +34,7 @@ export class SupplineWidgetElement extends HTMLElement {
     this.attachShadow({ mode: 'open' }).innerHTML = template(
       this.getAttribute('title') ?? 'How can we help?',
       this.getAttribute('position') === 'left' ? 'left' : 'right',
+      this.getAttribute('logo-url'),
     );
     this.bindEvents();
     this.updateMessages();
@@ -204,33 +205,38 @@ export class SupplineWidgetElement extends HTMLElement {
 }
 
 function authorLabel(message: WidgetMessage): string {
-  if (message.authorKind === 'ai') return 'Suppline AI';
+  if (message.authorKind === 'ai') return 'Chanda AI';
   if (message.authorKind === 'agent') return 'Support';
   return 'Update';
 }
 
-function template(title: string, position: 'left' | 'right'): string {
+function template(
+  title: string,
+  position: 'left' | 'right',
+  logoUrl: string | null,
+): string {
+  const logo = logoUrl ? `<img alt="" src="${escapeHtml(logoUrl)}" />` : '';
   return `
     <style>${styles}</style>
     <div class="root ${position}">
-      <section aria-label="Customer support chat" class="panel" data-panel hidden id="suppline-panel">
+      <section aria-label="Customer support chat" class="panel" data-panel hidden id="chanda-panel">
         <header>
-          <span class="placeholder-mark" aria-hidden="true">S</span>
-          <div><strong>${escapeHtml(title)}</strong><span>Suppline AI support</span></div>
+          <span class="brand-mark" aria-hidden="true">C${logo}</span>
+          <div><strong>${escapeHtml(title)}</strong><span>Chanda AI support</span></div>
           <button aria-label="Close support chat" data-close type="button">×</button>
         </header>
         <div aria-live="polite" class="messages" data-messages></div>
         <form>
-          <label for="suppline-message">Message</label>
-          <textarea id="suppline-message" maxlength="4000" placeholder="Write your message…" rows="2"></textarea>
+          <label for="chanda-message">Message</label>
+          <textarea id="chanda-message" maxlength="4000" placeholder="Write your message…" rows="2"></textarea>
           <div class="composer-footer">
             <span aria-live="polite" data-status></span>
             <button data-send disabled type="submit">Send</button>
           </div>
         </form>
-        <footer>Powered by Suppline AI</footer>
+        <footer>Powered by Chanda AI</footer>
       </section>
-      <button aria-controls="suppline-panel" aria-expanded="false" aria-label="Open support chat" class="launcher" data-launcher type="button">
+      <button aria-controls="chanda-panel" aria-expanded="false" aria-label="Open support chat" class="launcher" data-launcher type="button">
         <svg aria-hidden="true" fill="none" viewBox="0 0 24 24"><path d="M5 6.5A2.5 2.5 0 0 1 7.5 4h9A2.5 2.5 0 0 1 19 6.5v6a2.5 2.5 0 0 1-2.5 2.5H11l-4.8 4v-4.1A2.5 2.5 0 0 1 5 12.5v-6Z" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg>
       </button>
     </div>`;
@@ -253,7 +259,8 @@ const styles = `
   .root.left { right: auto; left: 1.25rem; }
   .panel { width: min(23rem, calc(100vw - 2rem)); height: min(36rem, calc(100vh - 6rem)); margin-bottom: .8rem; overflow: hidden; border: 1px solid #d9c9be; border-radius: .85rem; background: #fffdf9; box-shadow: 0 1.2rem 3rem rgb(51 34 25 / 20%); }
   header { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: .7rem; align-items: center; min-height: 4.35rem; border-bottom: 1px solid #dfd2c9; background: #f2e5db; padding: .75rem; }
-  .placeholder-mark { display: grid; width: 2.35rem; height: 2.35rem; place-items: center; border-radius: .55rem; background: #bf5b35; color: white; font-family: Georgia, serif; font-size: 1.1rem; font-weight: 700; }
+  .brand-mark { position: relative; display: grid; width: 2.35rem; height: 2.35rem; flex: none; place-items: center; overflow: hidden; border-radius: .62rem; background: #f5ad59; color: #34241d; font-family: Georgia, serif; font-size: 1.1rem; font-weight: 700; }
+  .brand-mark img { position: absolute; width: 111%; height: 111%; max-width: none; object-fit: cover; }
   header div { display: grid; gap: .12rem; min-width: 0; }
   header strong { overflow: hidden; font-family: Georgia, serif; font-size: .9rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
   header span { color: #745f54; font-size: .66rem; }
@@ -293,7 +300,7 @@ const styles = `
 function availableStorage(): WidgetStorage {
   try {
     const storage = window.localStorage;
-    const probe = 'suppline:storage-probe';
+    const probe = 'chanda:storage-probe';
     storage.setItem(probe, probe);
     storage.removeItem(probe);
     return storage;

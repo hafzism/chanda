@@ -29,6 +29,31 @@ describe('widget customer session', () => {
   it('generates base64url capability tokens', () => {
     expect(createConversationToken()).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
+
+  it('migrates an existing widget conversation to the Chanda storage key', () => {
+    const values = new Map<string, string>([
+      [
+        'suppline:widget:pub_123456789012345678901234:session',
+        JSON.stringify({
+          conversationToken: 'a'.repeat(43),
+          hasConversation: true,
+          threadId: 'thread-1',
+          visitorId: 'visitor-1',
+        }),
+      ],
+    ]);
+    const storage: WidgetStorage = {
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => values.set(key, value),
+    };
+
+    expect(
+      loadWidgetSession('pub_123456789012345678901234', storage),
+    ).toMatchObject({ hasConversation: true, threadId: 'thread-1' });
+    expect(
+      values.has('chanda:widget:pub_123456789012345678901234:session'),
+    ).toBe(true);
+  });
 });
 
 describe('widget API client', () => {
