@@ -25,6 +25,7 @@ test-results/
 /apps/web/public/widget.js
 
 # Local tooling and operating-system files
+/.codex/
 .DS_Store
 Thumbs.db
 *.log
