@@ -9,13 +9,13 @@ AWS_REGION=${AWS_REGION:?Set AWS_REGION to the backup bucket region.}
 BACKUP_METRICS_ENABLED=${BACKUP_METRICS_ENABLED:-false}
 COMPOSE_FILE=$SCRIPT_DIR/compose.production.yaml
 timestamp=$(date -u +'%Y-%m-%dT%H-%M-%SZ')
-object_uri="s3://$BACKUP_BUCKET/postgres/suppline-$timestamp.dump"
+object_uri="s3://$BACKUP_BUCKET/postgres/chanda-$timestamp.dump"
 
 publish_metric() {
   local value=$1
   if [[ "$BACKUP_METRICS_ENABLED" == 'true' ]]; then
     aws cloudwatch put-metric-data \
-      --namespace Suppline/Backups \
+      --namespace Chanda/Backups \
       --metric-data "MetricName=SuccessfulBackup,Value=$value,Unit=Count" \
       --region "$AWS_REGION" >/dev/null
   fi

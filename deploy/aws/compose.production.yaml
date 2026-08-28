@@ -1,7 +1,7 @@
-name: suppline-ai-production
+name: chanda-ai-production
 
 x-app: &app
-  image: ${SUPPLINE_IMAGE:-suppline-ai:production}
+  image: ${CHANDA_IMAGE:-chanda-ai:production}
   build:
     context: ../..
     dockerfile: Dockerfile
@@ -18,13 +18,13 @@ x-app: &app
     - no-new-privileges:true
 
 x-api-environment: &api-environment
+  AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY: ${AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY}
   API_PORT: 4000
   CHANNEL_CREDENTIALS_ENCRYPTION_KEY: ${CHANNEL_CREDENTIALS_ENCRYPTION_KEY}
   DATABASE_URL: postgresql://${POSTGRES_USER:-suppline}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-suppline}
   FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
   FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
   FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
-  GEMINI_API_KEY: ${GEMINI_API_KEY}
   GMAIL_OAUTH_REDIRECT_URI: https://${APP_DOMAIN}/v1/public/gmail/oauth/callback
   GOOGLE_GMAIL_CLIENT_ID: ${GOOGLE_GMAIL_CLIENT_ID}
   GOOGLE_GMAIL_CLIENT_SECRET: ${GOOGLE_GMAIL_CLIENT_SECRET}
@@ -123,8 +123,8 @@ services:
       redis:
         condition: service_healthy
     environment:
+      AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY: ${AI_PROVIDER_CREDENTIALS_ENCRYPTION_KEY}
       DATABASE_URL: postgresql://${POSTGRES_USER:-suppline}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-suppline}
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
       NODE_ENV: production
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       S3_BUCKET: ${S3_BUCKET}

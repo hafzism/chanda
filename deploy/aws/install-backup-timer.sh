@@ -30,7 +30,7 @@ fi
 
 cat >"$SERVICE_FILE" <<EOF
 [Unit]
-Description=Suppline AI encrypted PostgreSQL backup
+Description=Chanda AI encrypted PostgreSQL backup
 Requires=docker.service
 After=docker.service network-online.target
 
@@ -49,7 +49,7 @@ EOF
 
 cat >"$TIMER_FILE" <<'EOF'
 [Unit]
-Description=Run the Suppline AI PostgreSQL backup every day
+Description=Run the Chanda AI PostgreSQL backup every day
 
 [Timer]
 OnCalendar=*-*-* 02:15:00 UTC

@@ -33,9 +33,9 @@ case "$DEPLOY_MODE" in
     "${compose[@]}" build
     ;;
   pull)
-    image_ref=$(sed -n 's/^SUPPLINE_IMAGE=//p' "$ENV_FILE" | tail -n 1)
-    if [[ -z "$image_ref" || "$image_ref" == 'suppline-ai:production' ]]; then
-      echo "Set SUPPLINE_IMAGE to the published registry image before a pull deployment." >&2
+    image_ref=$(sed -n 's/^CHANDA_IMAGE=//p' "$ENV_FILE" | tail -n 1)
+    if [[ -z "$image_ref" || "$image_ref" == 'chanda-ai:production' ]]; then
+      echo "Set CHANDA_IMAGE to the published registry image before a pull deployment." >&2
       exit 1
     fi
     # SSM retains only a bounded amount of command output. Suppress per-layer
@@ -52,4 +52,4 @@ esac
 "${compose[@]}" up --detach --no-build --remove-orphans --wait --wait-timeout 180
 
 app_domain=$(sed -n 's/^APP_DOMAIN=//p' "$ENV_FILE" | tail -n 1)
-echo "Suppline AI is healthy at https://$app_domain"
+echo "Chanda AI is healthy at https://$app_domain"

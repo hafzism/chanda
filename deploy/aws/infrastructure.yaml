@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Cost-conscious single-host production infrastructure for Suppline AI.
+Description: Cost-conscious single-host production infrastructure for Chanda AI.
 
 Parameters:
   AlertEmail:
@@ -97,7 +97,7 @@ Resources:
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Public HTTPS ingress for Suppline AI; administration uses SSM.
+      GroupDescription: Public HTTPS ingress for Chanda AI; administration uses SSM.
       SecurityGroupEgress:
         - CidrIp: 0.0.0.0/0
           Description: Required for provider APIs, package/image pulls, S3, SSM, and certificate issuance.
@@ -133,7 +133,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
       Policies:
-        - PolicyName: SupplineObjectAndLogAccess
+        - PolicyName: ChandaObjectAndLogAccess
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
@@ -169,7 +169,7 @@ Resources:
                 Resource: '*'
                 Condition:
                   StringEquals:
-                    cloudwatch:namespace: Suppline/Backups
+                    cloudwatch:namespace: Chanda/Backups
               - Sid: SignalBootstrapResult
                 Effect: Allow
                 Action: cloudformation:SignalResource
@@ -214,9 +214,9 @@ Resources:
           SubnetId: !Ref SubnetId
       Tags:
         - Key: Name
-          Value: suppline-production
+          Value: chanda-production
         - Key: Product
-          Value: SupplineAI
+          Value: ChandaAI
       UserData:
         Fn::Base64: !Sub |
           #!/usr/bin/env bash
@@ -275,16 +275,16 @@ Resources:
       InstanceId: !Ref ApplicationInstance
       Tags:
         - Key: Name
-          Value: suppline-production
+          Value: chanda-production
 
   AlertTopic:
     Type: AWS::SNS::Topic
     Properties:
       Tags:
         - Key: Name
-          Value: suppline-production-alerts
+          Value: chanda-production-alerts
         - Key: Product
-          Value: SupplineAI
+          Value: ChandaAI
 
   AlertSubscription:
     Type: AWS::SNS::Subscription
@@ -298,7 +298,7 @@ Resources:
     Properties:
       AlarmActions:
         - !Ref AlertTopic
-      AlarmDescription: Suppline EC2 CPU remained above 85 percent.
+      AlarmDescription: Chanda EC2 CPU remained above 85 percent.
       ComparisonOperator: GreaterThanThreshold
       Dimensions:
         - Name: InstanceId
@@ -316,7 +316,7 @@ Resources:
     Properties:
       AlarmActions:
         - !Ref AlertTopic
-      AlarmDescription: Suppline EC2 failed an instance or system status check.
+      AlarmDescription: Chanda EC2 failed an instance or system status check.
       ComparisonOperator: GreaterThanOrEqualToThreshold
       Dimensions:
         - Name: InstanceId
@@ -334,11 +334,11 @@ Resources:
     Properties:
       AlarmActions:
         - !Ref AlertTopic
-      AlarmDescription: Suppline did not report a successful PostgreSQL backup in the last day.
+      AlarmDescription: Chanda did not report a successful PostgreSQL backup in the last day.
       ComparisonOperator: LessThanThreshold
       EvaluationPeriods: 1
       MetricName: SuccessfulBackup
-      Namespace: Suppline/Backups
+      Namespace: Chanda/Backups
       Period: 86400
       Statistic: Maximum
       Threshold: 1
@@ -364,9 +364,9 @@ Resources:
               SubscriptionType: EMAIL
       ResourceTags:
         - Key: Name
-          Value: suppline-production-monthly
+          Value: chanda-production-monthly
         - Key: Product
-          Value: SupplineAI
+          Value: ChandaAI
 
   GitHubDeployRole:
     Type: AWS::IAM::Role
@@ -384,7 +384,7 @@ Resources:
                 token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOwner}/${GitHubRepository}:environment:production'
       MaxSessionDuration: 3600
       Policies:
-        - PolicyName: DeployOnlyToSupplineInstance
+        - PolicyName: DeployOnlyToChandaInstance
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
